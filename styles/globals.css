@@ -1,0 +1,251 @@
+@import url("https://fonts.googleapis.com/css2?family=Grand+Hotel&family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@400;500;600;700&family=Space+Mono:wght@500;700&display=swap");
+
+:root {
+  --bg-a: #eef2fc;
+  --bg-b: #fbeef6;
+  --panel: #ffffff;
+  --panel-2: #f7f5fd;
+  --border: #e7defa;
+  --text: #46425f;
+  --muted: #9791b3;
+  --gold: #f3c26b;
+  --accent: #b79cf0;
+  --accent-2: #f3a6c8;
+  --mint: #8fd6c1;
+  --coral: #f0899f;
+  --sky: #93b7f0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background:
+    radial-gradient(900px 500px at 8% -8%, rgba(183,156,240,0.18), transparent),
+    radial-gradient(900px 500px at 100% 0%, rgba(243,166,200,0.16), transparent),
+    linear-gradient(180deg, var(--bg-a), var(--bg-b));
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: "Quicksand", sans-serif;
+  min-height: 100vh;
+}
+
+a { color: inherit; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+
+.vault-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px dashed var(--border);
+}
+.vault-title-wrap { display: flex; align-items: center; gap: 14px; }
+.brand-badge {
+  width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
+  box-shadow: 0 4px 16px rgba(183,156,240,0.35); border: 2px solid #fff;
+}
+.vault-title {
+  font-family: "Grand Hotel", cursive; font-weight: 400; font-size: 40px; line-height: 1; margin: 0;
+  color: var(--accent); text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+}
+.vault-sub { font-family: "Baloo 2", sans-serif; font-weight: 500; color: var(--muted); font-size: 13.5px; margin-top: 5px; }
+.scan-mark { display: none; }
+
+.stat-pill {
+  font-family: "Space Mono", monospace; font-size: 12px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--border); padding: 7px 12px; border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(183,156,240,0.12);
+}
+.stat-pill b { color: var(--accent); }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-chip {
+  font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 13.5px;
+  padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--muted); cursor: pointer; transition: transform 0.12s ease;
+}
+.filter-chip:hover { color: var(--text); transform: translateY(-1px); }
+.filter-chip.active { color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(183,156,240,0.35); }
+
+.btn, .add-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 14.5px;
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none; padding: 11px 18px; border-radius: 999px; cursor: pointer;
+  box-shadow: 0 6px 16px rgba(183,156,240,0.35);
+}
+.btn:hover, .add-btn:hover { filter: brightness(1.05); }
+.btn:disabled { opacity: 0.6; cursor: default; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
+
+.item-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 18px; overflow: hidden;
+  cursor: pointer; display: flex; flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 2px 10px rgba(70,66,95,0.05);
+}
+.item-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(183,156,240,0.25); }
+.item-thumb {
+  position: relative; aspect-ratio: 1 / 1; background: var(--panel-2);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.item-thumb.sold img { opacity: 0.35; filter: grayscale(0.3); }
+.sold-badge {
+  position: absolute; top: 10px; left: 10px;
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px;
+  color: #fff; background: var(--coral); padding: 4px 10px; border-radius: 999px; z-index: 2;
+}
+.game-tag {
+  position: absolute; bottom: 10px; left: 10px;
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px;
+  padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.85); z-index: 2;
+  box-shadow: 0 2px 6px rgba(70,66,95,0.12);
+}
+.corner-frame { position: relative; width: 100%; height: 100%; }
+.cf-arm { position: absolute; width: 14px; height: 14px; border-style: solid; border-width: 0; opacity: 0.85; }
+.cf-tl { top: 8px; left: 8px; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+.cf-tr { top: 8px; right: 8px; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+.cf-bl { bottom: 8px; left: 8px; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
+.cf-br { bottom: 8px; right: 8px; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+.item-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 9px; }
+.item-name { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 15px; line-height: 1.25; color: var(--text); }
+.item-foot { display: flex; align-items: center; justify-content: space-between; }
+
+.price-ticket {
+  position: relative; font-family: "Space Mono", monospace; font-weight: 700; font-size: 13px;
+  color: #6b4a17; background: linear-gradient(135deg, #fbe0a4, var(--gold));
+  padding: 5px 13px 5px 17px; clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+}
+
+.empty-state {
+  text-align: center; color: var(--muted); padding: 54px 20px; border: 1.5px dashed var(--border);
+  border-radius: 18px; font-family: "Baloo 2", sans-serif; background: rgba(255,255,255,0.5);
+}
+.empty-state h3 { font-family: "Grand Hotel", cursive; font-size: 26px; font-weight: 400; color: var(--accent); margin: 10px 0 6px; }
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(70, 66, 95, 0.35); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 22px; width: 100%;
+  max-width: 480px; max-height: 90vh; overflow-y: auto; position: relative;
+  box-shadow: 0 20px 60px rgba(70,66,95,0.25);
+}
+.modal-close {
+  position: absolute; top: 14px; right: 14px; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center; background: #fff;
+  border: 1px solid var(--border); border-radius: 50%; color: var(--muted); cursor: pointer; z-index: 3;
+  font-size: 15px; line-height: 1; box-shadow: 0 2px 8px rgba(70,66,95,0.15);
+}
+.modal-close:hover { color: var(--coral); }
+
+.form-grid { padding: 22px; display: flex; flex-direction: column; gap: 15px; }
+.field label {
+  display: block; font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 12px;
+  color: var(--muted); margin-bottom: 6px;
+}
+.field input[type="text"], .field input[type="number"], .field input[type="password"],
+.field textarea, .field select {
+  width: 100%; background: var(--panel-2); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 10px 13px; color: var(--text); font-family: "Quicksand", sans-serif; font-weight: 500;
+  font-size: 14px; outline: none;
+}
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 64px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.img-drop {
+  display: block; border: 1.5px dashed var(--border); border-radius: 14px; padding: 16px; text-align: center;
+  color: var(--muted); cursor: pointer; font-family: "Baloo 2", sans-serif; font-size: 13px; background: var(--panel-2);
+}
+.img-drop:hover { border-color: var(--accent); color: var(--accent); }
+.img-preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; margin-bottom: 8px; }
+
+.checkout-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+.checkout-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 15px; }
+.checkout-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.checkout-name { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 19px; }
+.checkout-game {
+  display: inline-block; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px;
+  padding: 4px 10px; border-radius: 999px; margin-top: 5px;
+}
+.checkout-desc { color: var(--muted); font-size: 13.5px; line-height: 1.55; font-weight: 500; }
+
+.pay-panel {
+  background: linear-gradient(180deg, var(--panel-2), #fff); border: 1.5px solid var(--border);
+  border-radius: 18px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 11px;
+}
+.pay-label {
+  display: flex; align-items: center; gap: 6px; font-family: "Baloo 2", sans-serif; font-weight: 700;
+  font-size: 12.5px; color: #b8862e;
+}
+.qr-wrap { padding: 10px; background: #fff; border-radius: 14px; box-shadow: 0 4px 14px rgba(70,66,95,0.12); }
+.qr-wrap img { width: 190px; height: auto; display: block; border-radius: 6px; }
+.pay-hint { color: var(--muted); font-size: 12.5px; text-align: center; line-height: 1.55; max-width: 300px; font-weight: 500; }
+
+.action-row { display: flex; gap: 10px; }
+.btn-secondary, .btn-danger {
+  flex: 1; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13px; border-radius: 999px;
+  padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px solid var(--border); background: var(--panel-2); color: var(--text);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { color: var(--coral); }
+.btn-danger:hover { border-color: var(--coral); }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--panel); border: 1.5px solid var(--border); color: var(--text);
+  padding: 11px 18px; border-radius: 999px; font-family: "Baloo 2", sans-serif; font-size: 13.5px;
+  font-weight: 700; z-index: 60; box-shadow: 0 10px 28px rgba(70,66,95,0.2);
+}
+.toast.error { border-color: var(--coral); color: var(--coral); }
+
+.login-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card {
+  width: 100%; max-width: 360px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 22px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(183,156,240,0.25);
+}
+.login-title { font-family: "Grand Hotel", cursive; font-weight: 400; font-size: 30px; margin: 6px 0 2px; color: var(--accent); }
+.login-sub { font-family: "Baloo 2", sans-serif; font-weight: 500; color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+.error-text { color: var(--coral); font-size: 12.5px; margin-top: -4px; font-family: "Baloo 2", sans-serif; font-weight: 600; text-align: left; }
+
+.dash-section { margin-top: 30px; }
+.dash-section h2 {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 16px; margin: 0 0 14px;
+  display: flex; align-items: center; gap: 8px; color: var(--text);
+}
+.order-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 13px 16px; margin-bottom: 10px; flex-wrap: wrap; box-shadow: 0 2px 10px rgba(70,66,95,0.05);
+}
+.order-main { font-family: "Baloo 2", sans-serif; }
+.order-name { font-weight: 700; font-size: 14px; }
+.order-meta { color: var(--muted); font-size: 12.5px; margin-top: 3px; font-weight: 500; }
+.status-badge {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11px; padding: 4px 11px;
+  border-radius: 999px; text-transform: uppercase;
+}
+.status-pending { background: rgba(243,194,107,0.2); color: #b8862e; }
+.status-confirmed { background: rgba(143,214,193,0.3); color: #2f8a6f; }
+.status-rejected { background: rgba(240,137,159,0.2); color: var(--coral); }
+.order-actions { display: flex; gap: 8px; }
+.order-actions button {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px; border-radius: 999px;
+  padding: 7px 12px; cursor: pointer; border: 1.5px solid var(--border); background: var(--panel-2); color: var(--text);
+}
+.order-actions button.confirm:hover { border-color: var(--mint); color: #2f8a6f; }
+.order-actions button.reject:hover { border-color: var(--coral); color: var(--coral); }
+
+.top-actions { display: flex; gap: 10px; }
+.link-btn {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--border); padding: 9px 16px; border-radius: 999px;
+  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+}
+.link-btn:hover { color: var(--accent); border-color: var(--accent); }
