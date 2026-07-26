@@ -58,6 +58,7 @@ a { color: inherit; }
 }
 .stat-pill b { color: var(--accent); }
 
+.contact-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .filter-chip {

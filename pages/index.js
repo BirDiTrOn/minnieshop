@@ -114,6 +114,12 @@ export default function Storefront() {
         <div className="stat-pill"><b>{activeCount}</b> available</div>
       </header>
 
+      <div className="contact-row">
+        <a className="link-btn" href="https://t.me/Lisaa_lisaz" target="_blank" rel="noreferrer">💬 @Lisaa_lisaz</a>
+        <a className="link-btn" href="https://t.me/nannsiv" target="_blank" rel="noreferrer">💬 @nannsiv</a>
+        <a className="link-btn" href="https://t.me/minnieshoppie" target="_blank" rel="noreferrer">👥 Join our Telegram group</a>
+      </div>
+
       <div className="toolbar">
         <div className="filters">
           <button className={`filter-chip ${filter === "all" ? "active" : ""}`} style={filter === "all" ? { background: "#5fce7a" } : {}} onClick={() => setFilter("all")}>
