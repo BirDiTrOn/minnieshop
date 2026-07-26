@@ -19,7 +19,23 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ error: error.message });
 
     if (status === "confirmed" && data.item_id) {
-      await supabaseAdmin.from("items").update({ sold: true }).eq("id", data.item_id);
+      const { data: item } = await supabaseAdmin
+        .from("items")
+        .select("*")
+        .eq("id", data.item_id)
+        .single();
+
+      if (item && item.stock !== null && item.stock !== undefined) {
+        const unitsBought = item.pricing_mode === "unit" ? data.qty * item.unit_amount : data.qty;
+        const newStock = Math.max(0, Number(item.stock) - unitsBought);
+        await supabaseAdmin
+          .from("items")
+          .update({ stock: newStock, sold: newStock <= 0 })
+          .eq("id", data.item_id);
+      } else {
+        // No stock tracking on this item — fall back to the old behavior.
+        await supabaseAdmin.from("items").update({ sold: true }).eq("id", data.item_id);
+      }
     }
 
     return res.status(200).json({ order: data });

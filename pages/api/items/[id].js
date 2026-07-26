@@ -6,7 +6,10 @@ export default async function handler(req, res) {
   const { id } = req.query;
 
   if (req.method === "PUT") {
-    const allowed = ["name", "game", "game_label", "price", "currency", "description", "image", "sold"];
+    const allowed = [
+      "name", "game", "game_label", "price", "currency", "description", "image", "sold",
+      "pricing_mode", "unit_label", "unit_amount", "stock",
+    ];
     const updates = {};
     for (const key of allowed) {
       if (key in (req.body || {})) updates[key] = req.body[key];

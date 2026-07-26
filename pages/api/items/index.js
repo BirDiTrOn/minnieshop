@@ -13,8 +13,12 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
-    const { name, game, gameLabel, price, currency, description, image } = req.body || {};
+    const { name, game, gameLabel, price, currency, description, image, pricingMode, unitLabel, unitAmount, stock } =
+      req.body || {};
     if (!name || !price) return res.status(400).json({ error: "Name and price are required" });
+    if (pricingMode === "unit" && (!unitLabel || !unitAmount)) {
+      return res.status(400).json({ error: "Unit label and unit amount are required for per-unit pricing" });
+    }
 
     const { data, error } = await supabaseAdmin
       .from("items")
@@ -24,6 +28,10 @@ export default async function handler(req, res) {
         game_label: gameLabel || "Other game",
         price,
         currency: currency || "USD",
+        pricing_mode: pricingMode === "unit" ? "unit" : "fixed",
+        unit_label: pricingMode === "unit" ? unitLabel : null,
+        unit_amount: pricingMode === "unit" ? unitAmount : null,
+        stock: stock === "" || stock === null || stock === undefined ? null : stock,
         description: description || "",
         image: image || null,
         sold: false,

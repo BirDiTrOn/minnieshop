@@ -17,12 +17,51 @@ function formatPrice(price, currency) {
   return `$${n.toFixed(2)}`;
 }
 
+function isUnitItem(item) {
+  return item.pricing_mode === "unit" && item.unit_amount;
+}
+
+function unitRateLabel(item) {
+  return `${Number(item.unit_amount).toLocaleString()} ${item.unit_label} = ${formatPrice(item.price, item.currency)}`;
+}
+
+function hasStockTracking(item) {
+  return item.stock !== null && item.stock !== undefined;
+}
+
+function isOutOfStock(item) {
+  return hasStockTracking(item) && Number(item.stock) <= 0;
+}
+
+function isUnavailable(item) {
+  return item.sold || isOutOfStock(item);
+}
+
+function showQtyPicker(item) {
+  if (isUnitItem(item)) return true;
+  return hasStockTracking(item) && Number(item.stock) > 1;
+}
+
+function maxPacks(item) {
+  if (!hasStockTracking(item)) return null;
+  if (isUnitItem(item)) return Math.max(1, Math.floor(Number(item.stock) / Number(item.unit_amount)));
+  return Math.max(1, Math.floor(Number(item.stock)));
+}
+
+function stockLabel(item) {
+  if (!hasStockTracking(item)) return null;
+  if (isOutOfStock(item)) return "Out of stock";
+  const n = Number(item.stock);
+  return isUnitItem(item) ? `${n.toLocaleString()} ${item.unit_label} left` : `${n.toLocaleString()} left`;
+}
+
 export default function Storefront() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [buyerContact, setBuyerContact] = useState("");
+  const [packs, setPacks] = useState(1);
   const [claimState, setClaimState] = useState("idle"); // idle | sending | sent | error
 
   useEffect(() => {
@@ -35,6 +74,7 @@ export default function Storefront() {
   function openItem(item) {
     setSelected(item);
     setBuyerContact("");
+    setPacks(1);
     setClaimState("idle");
   }
 
@@ -45,7 +85,7 @@ export default function Storefront() {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: selected.id, buyerContact }),
+        body: JSON.stringify({ itemId: selected.id, buyerContact, qty: packs }),
       });
       if (!res.ok) throw new Error("failed");
       setClaimState("sent");
@@ -55,7 +95,7 @@ export default function Storefront() {
   }
 
   const filtered = items.filter((it) => filter === "all" || it.game === filter);
-  const activeCount = items.filter((it) => !it.sold).length;
+  const activeCount = items.filter((it) => !isUnavailable(it)).length;
 
   return (
     <div className="wrap">
@@ -105,8 +145,8 @@ export default function Storefront() {
             const meta = gameMeta(it.game);
             return (
               <div key={it.id} className="item-card" style={{ "--card-accent": meta.accent }} onClick={() => openItem(it)}>
-                <div className={`item-thumb ${it.sold ? "sold" : ""}`}>
-                  {it.sold && <span className="sold-badge">SOLD</span>}
+                <div className={`item-thumb ${isUnavailable(it) ? "sold" : ""}`}>
+                  {isUnavailable(it) && <span className="sold-badge">{isOutOfStock(it) && !it.sold ? "OUT OF STOCK" : "SOLD"}</span>}
                   <span className="game-tag" style={{ color: meta.accent }}>{it.game_label}</span>
                   <div className="corner-frame">
                     <span className="cf-arm cf-tl" style={{ borderColor: meta.accent }} />
@@ -125,9 +165,14 @@ export default function Storefront() {
                 <div className="item-body">
                   <div className="item-name">{it.name}</div>
                   <div className="item-foot">
-                    <span className="price-ticket">{formatPrice(it.price, it.currency)}</span>
+                    <span className="price-ticket">
+                      {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
+                    </span>
                     <span style={{ color: "var(--muted)", fontSize: 13 }}>›</span>
                   </div>
+                  {stockLabel(it) && !it.sold && (
+                    <div className="order-meta" style={{ marginTop: -4 }}>{stockLabel(it)}</div>
+                  )}
                 </div>
               </div>
             );
@@ -148,14 +193,18 @@ export default function Storefront() {
                     {selected.game_label}
                   </span>
                 </div>
-                <span className="price-ticket">{formatPrice(selected.price, selected.currency)}</span>
+                <span className="price-ticket">
+                  {isUnitItem(selected) ? unitRateLabel(selected) : formatPrice(selected.price, selected.currency)}
+                </span>
               </div>
 
               {selected.description && <div className="checkout-desc">{selected.description}</div>}
 
-              {selected.sold ? (
+              {isUnavailable(selected) ? (
                 <div className="pay-panel">
-                  <div className="pay-label" style={{ color: "var(--muted)" }}>Already sold</div>
+                  <div className="pay-label" style={{ color: "var(--muted)" }}>
+                    {isOutOfStock(selected) && !selected.sold ? "Out of stock" : "Already sold"}
+                  </div>
                 </div>
               ) : claimState === "sent" ? (
                 <div className="pay-panel">
@@ -164,13 +213,54 @@ export default function Storefront() {
                 </div>
               ) : (
                 <div className="pay-panel">
+                  {showQtyPicker(selected) && (
+                    <div className="qty-picker">
+                      <span className="qty-picker-label">{isUnitItem(selected) ? "How many packs?" : "How many?"}</span>
+                      <div className="qty-stepper">
+                        <button type="button" onClick={() => setPacks((p) => Math.max(1, p - 1))}>−</button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={maxPacks(selected) || undefined}
+                          value={packs}
+                          onChange={(e) => {
+                            const cap = maxPacks(selected);
+                            const v = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                            setPacks(cap ? Math.min(v, cap) : v);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cap = maxPacks(selected);
+                            setPacks((p) => (cap ? Math.min(p + 1, cap) : p + 1));
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      {isUnitItem(selected) ? (
+                        <div className="qty-total">
+                          = {(packs * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
+                          <b>{formatPrice(packs * selected.price, selected.currency)}</b>
+                        </div>
+                      ) : (
+                        <div className="qty-total">
+                          Total: <b>{formatPrice(packs * selected.price, selected.currency)}</b>
+                        </div>
+                      )}
+                      {stockLabel(selected) && (
+                        <div className="qty-picker-label" style={{ marginTop: -2 }}>{stockLabel(selected)}</div>
+                      )}
+                    </div>
+                  )}
                   <div className="pay-label">💗 Scan to pay</div>
                   <div className="qr-wrap">
                     <img src="/qr.jpg" alt="Payment QR code" />
                   </div>
                   <div className="pay-hint">
-                    Scan with your banking app to pay {formatPrice(selected.price, selected.currency)}. Once you've
-                    paid, add your contact below and tap notify — I'll confirm and set up the in-game trade.
+                    Scan with your banking app to pay {formatPrice(packs * selected.price, selected.currency)}.
+                    Once you've paid, add your contact below and tap notify — I'll confirm and set up the in-game trade.
                   </div>
                   <div className="field" style={{ width: "100%" }}>
                     <label>Your Roblox / Telegram username (optional but helps)</label>

@@ -58,6 +58,7 @@ export default function Dashboard() {
 
   const [form, setForm] = useState({
     name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
+    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "",
   });
   const [imgError, setImgError] = useState("");
 
@@ -83,7 +84,10 @@ export default function Dashboard() {
   }
 
   function resetForm() {
-    setForm({ name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null });
+    setForm({
+      name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
+      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "",
+    });
     setImgError("");
   }
 
@@ -106,6 +110,7 @@ export default function Dashboard() {
   async function handleAddItem(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.price) return;
+    if (form.pricingMode === "unit" && (!form.unitLabel.trim() || !form.unitAmount)) return;
     setSaving(true);
     const gameLabel = form.game === "other" ? (form.customGame.trim() || "Other game") : gameMeta(form.game).label;
     try {
@@ -120,6 +125,10 @@ export default function Dashboard() {
           currency: form.currency,
           description: form.description.trim(),
           image: form.image,
+          pricingMode: form.pricingMode,
+          unitLabel: form.pricingMode === "unit" ? form.unitLabel.trim() : null,
+          unitAmount: form.pricingMode === "unit" ? form.unitAmount : null,
+          stock: form.stock === "" ? null : form.stock,
         }),
       });
       if (!res.ok) throw new Error("failed");
@@ -217,7 +226,10 @@ export default function Dashboard() {
           orders.map((o) => (
             <div className="order-row" key={o.id}>
               <div className="order-main">
-                <div className="order-name">{o.item_name} — {formatPrice(o.price, o.currency)}</div>
+                <div className="order-name">
+                  {o.item_name} {o.qty > 1 && <span style={{ color: "var(--muted)" }}>× {o.qty}</span>} —{" "}
+                  {formatPrice(o.total_price ?? o.price, o.currency)}
+                </div>
                 <div className="order-meta">
                   {o.buyer_contact ? `Contact: ${o.buyer_contact}` : "No contact provided"} · {new Date(o.created_at).toLocaleString()}
                 </div>
@@ -264,8 +276,19 @@ export default function Dashboard() {
                   <div className="item-body">
                     <div className="item-name">{it.name}</div>
                     <div className="item-foot">
-                      <span className="price-ticket">{formatPrice(it.price, it.currency)}</span>
+                      <span className="price-ticket">
+                        {it.pricing_mode === "unit" && it.unit_amount
+                          ? `${Number(it.unit_amount).toLocaleString()} ${it.unit_label} = ${formatPrice(it.price, it.currency)}`
+                          : formatPrice(it.price, it.currency)}
+                      </span>
                     </div>
+                    {it.stock !== null && it.stock !== undefined && (
+                      <div className="order-meta" style={{ marginTop: -4 }}>
+                        {it.stock > 0
+                          ? `${Number(it.stock).toLocaleString()} ${it.pricing_mode === "unit" ? it.unit_label : "in stock"} left`
+                          : "Out of stock"}
+                      </div>
+                    )}
                     <div className="action-row">
                       <button className="btn-secondary" onClick={() => toggleSold(it)}>
                         {it.sold ? "Mark available" : "Mark sold"}
@@ -311,9 +334,46 @@ export default function Dashboard() {
                 )}
               </div>
 
+              <div className="field">
+                <label>How is this priced?</label>
+                <div className="row-2">
+                  <button
+                    type="button"
+                    className={`filter-chip ${form.pricingMode === "fixed" ? "active" : ""}`}
+                    style={form.pricingMode === "fixed" ? { background: "#7cc3e8" } : {}}
+                    onClick={() => setForm((f) => ({ ...f, pricingMode: "fixed" }))}
+                  >
+                    One fixed price
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-chip ${form.pricingMode === "unit" ? "active" : ""}`}
+                    style={form.pricingMode === "unit" ? { background: "#7cc3e8" } : {}}
+                    onClick={() => setForm((f) => ({ ...f, pricingMode: "unit" }))}
+                  >
+                    Per unit (bulk / top-up)
+                  </button>
+                </div>
+              </div>
+
+              {form.pricingMode === "unit" && (
+                <div className="row-2">
+                  <div className="field">
+                    <label>Unit name</label>
+                    <input type="text" placeholder="e.g. Sheckles, Coins" value={form.unitLabel}
+                      onChange={(e) => setForm((f) => ({ ...f, unitLabel: e.target.value }))} required />
+                  </div>
+                  <div className="field">
+                    <label>Units per pack</label>
+                    <input type="number" min="1" step="1" placeholder="e.g. 100" value={form.unitAmount}
+                      onChange={(e) => setForm((f) => ({ ...f, unitAmount: e.target.value }))} required />
+                  </div>
+                </div>
+              )}
+
               <div className="row-2">
                 <div className="field">
-                  <label>Price</label>
+                  <label>{form.pricingMode === "unit" ? "Price per pack" : "Price"}</label>
                   <input type="number" step="0.01" min="0" placeholder="0.00" value={form.price}
                     onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} required />
                 </div>
@@ -324,6 +384,24 @@ export default function Dashboard() {
                     <option value="KHR">KHR</option>
                   </select>
                 </div>
+              </div>
+
+              {form.pricingMode === "unit" && form.unitLabel && form.unitAmount && form.price && (
+                <div className="qty-total" style={{ marginTop: -8 }}>
+                  Buyers will see: <b>{Number(form.unitAmount).toLocaleString()} {form.unitLabel} = {formatPrice(form.price, form.currency)}</b>
+                </div>
+              )}
+
+              <div className="field">
+                <label>Stock {form.pricingMode === "unit" ? `(total ${form.unitLabel || "units"} you have)` : "(how many copies you have)"} — optional</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Leave blank for unlimited / not tracked"
+                  value={form.stock}
+                  onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                />
               </div>
 
               <div className="field">

@@ -4,7 +4,7 @@ import { sendTelegramMessage } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method === "POST") {
-    const { itemId, buyerContact } = req.body || {};
+    const { itemId, buyerContact, qty } = req.body || {};
     if (!itemId) return res.status(400).json({ error: "itemId is required" });
 
     const { data: item, error: itemErr } = await supabaseAdmin
@@ -14,6 +14,17 @@ export default async function handler(req, res) {
       .single();
     if (itemErr || !item) return res.status(404).json({ error: "Item not found" });
 
+    const isUnitPricing = item.pricing_mode === "unit";
+    const packs = Math.max(1, Math.floor(Number(qty) || 1));
+    const totalPrice = Math.round(Number(item.price) * packs * 100) / 100;
+
+    if (item.stock !== null && item.stock !== undefined) {
+      const unitsRequested = isUnitPricing ? packs * item.unit_amount : packs;
+      if (unitsRequested > Number(item.stock)) {
+        return res.status(400).json({ error: "Not enough stock left for that quantity" });
+      }
+    }
+
     const { data: order, error } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -21,6 +32,8 @@ export default async function handler(req, res) {
         item_name: item.name,
         price: item.price,
         currency: item.currency,
+        qty: packs,
+        total_price: totalPrice,
         buyer_contact: buyerContact || null,
         status: "pending",
       })
@@ -28,12 +41,16 @@ export default async function handler(req, res) {
       .single();
     if (error) return res.status(500).json({ error: error.message });
 
-    const priceLabel = item.currency === "KHR" ? `៛${item.price}` : `$${item.price}`;
+    const currencySign = item.currency === "KHR" ? "៛" : "$";
+    const quantityLine = isUnitPricing
+      ? `Quantity: ${packs} × ${item.unit_amount} ${item.unit_label} = ${packs * item.unit_amount} ${item.unit_label}\n`
+      : "";
     const text =
       `New payment claim\n\n` +
       `Item: ${item.name}\n` +
       `Game: ${item.game_label}\n` +
-      `Price: ${priceLabel}\n` +
+      quantityLine +
+      `Total: ${currencySign}${totalPrice}\n` +
       `Buyer contact: ${buyerContact || "not provided"}\n\n` +
       `Open your admin dashboard to confirm the trade.`;
 
