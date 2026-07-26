@@ -61,6 +61,7 @@ export default function Storefront() {
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [buyerContact, setBuyerContact] = useState("");
+  const [telegramContact, setTelegramContact] = useState("");
   const [packs, setPacks] = useState(1);
   const [claimState, setClaimState] = useState("idle"); // idle | sending | sent | error
 
@@ -74,18 +75,19 @@ export default function Storefront() {
   function openItem(item) {
     setSelected(item);
     setBuyerContact("");
+    setTelegramContact("");
     setPacks(1);
     setClaimState("idle");
   }
 
   async function submitClaim() {
-    if (!selected || !buyerContact.trim()) return;
+    if (!selected || !buyerContact.trim() || !telegramContact.trim()) return;
     setClaimState("sending");
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: selected.id, buyerContact, qty: packs }),
+        body: JSON.stringify({ itemId: selected.id, buyerContact, telegramContact, qty: packs }),
       });
       if (!res.ok) throw new Error("failed");
       setClaimState("sent");
@@ -278,11 +280,21 @@ export default function Storefront() {
                       required
                     />
                   </div>
+                  <div className="field" style={{ width: "100%" }}>
+                    <label>Your Telegram username (required)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. @yourhandle"
+                      value={telegramContact}
+                      onChange={(e) => setTelegramContact(e.target.value)}
+                      required
+                    />
+                  </div>
                   <button
                     className="btn"
                     style={{ width: "100%", justifyContent: "center" }}
                     onClick={submitClaim}
-                    disabled={claimState === "sending" || !buyerContact.trim()}
+                    disabled={claimState === "sending" || !buyerContact.trim() || !telegramContact.trim()}
                   >
                     {claimState === "sending" ? "Sending…" : "I've paid — notify seller"}
                   </button>

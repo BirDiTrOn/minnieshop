@@ -264,7 +264,9 @@ export default function Dashboard() {
                   {formatPrice(o.total_price ?? o.price, o.currency)}
                 </div>
                 <div className="order-meta">
-                  {o.buyer_contact ? `Contact: ${o.buyer_contact}` : "No contact provided"} · {new Date(o.created_at).toLocaleString()}
+                  {o.buyer_contact ? `Roblox: ${o.buyer_contact}` : "No Roblox username"}
+                  {o.telegram_contact ? ` · Telegram: ${o.telegram_contact}` : ""} ·{" "}
+                  {new Date(o.created_at).toLocaleString()}
                 </div>
               </div>
               {o.status === "pending" ? (

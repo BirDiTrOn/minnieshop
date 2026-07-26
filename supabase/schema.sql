@@ -28,6 +28,7 @@ create table if not exists orders (
   qty integer not null default 1,
   total_price numeric,
   buyer_contact text,
+  telegram_contact text,
   status text not null default 'pending',
   created_at timestamptz not null default now()
 );

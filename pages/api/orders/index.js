@@ -4,10 +4,13 @@ import { sendTelegramMessage } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method === "POST") {
-    const { itemId, buyerContact, qty } = req.body || {};
+    const { itemId, buyerContact, telegramContact, qty } = req.body || {};
     if (!itemId) return res.status(400).json({ error: "itemId is required" });
     if (!buyerContact || !buyerContact.trim()) {
       return res.status(400).json({ error: "buyerContact (Roblox username) is required" });
+    }
+    if (!telegramContact || !telegramContact.trim()) {
+      return res.status(400).json({ error: "telegramContact is required" });
     }
 
     const { data: item, error: itemErr } = await supabaseAdmin
@@ -38,6 +41,7 @@ export default async function handler(req, res) {
         qty: packs,
         total_price: totalPrice,
         buyer_contact: buyerContact || null,
+        telegram_contact: telegramContact || null,
         status: "pending",
       })
       .select()
@@ -54,7 +58,8 @@ export default async function handler(req, res) {
       `Game: ${item.game_label}\n` +
       quantityLine +
       `Total: ${currencySign}${totalPrice}\n` +
-      `Buyer contact: ${buyerContact || "not provided"}\n\n` +
+      `Roblox username: ${buyerContact || "not provided"}\n` +
+      `Telegram: ${telegramContact || "not provided"}\n\n` +
       `Open your admin dashboard to confirm the trade.`;
 
     try {
