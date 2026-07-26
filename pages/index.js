@@ -37,9 +37,8 @@ function isUnavailable(item) {
   return item.sold || isOutOfStock(item);
 }
 
-function showQtyPicker(item) {
-  if (isUnitItem(item)) return true;
-  return hasStockTracking(item) && Number(item.stock) > 1;
+function showQtyPicker() {
+  return true;
 }
 
 function maxPacks(item) {
