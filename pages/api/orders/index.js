@@ -6,6 +6,9 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     const { itemId, buyerContact, qty } = req.body || {};
     if (!itemId) return res.status(400).json({ error: "itemId is required" });
+    if (!buyerContact || !buyerContact.trim()) {
+      return res.status(400).json({ error: "buyerContact (Roblox username) is required" });
+    }
 
     const { data: item, error: itemErr } = await supabaseAdmin
       .from("items")

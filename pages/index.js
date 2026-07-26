@@ -79,7 +79,7 @@ export default function Storefront() {
   }
 
   async function submitClaim() {
-    if (!selected) return;
+    if (!selected || !buyerContact.trim()) return;
     setClaimState("sending");
     try {
       const res = await fetch("/api/orders", {
@@ -269,15 +269,21 @@ export default function Storefront() {
                     Once you've paid, add your contact below and tap notify — I'll confirm and set up the in-game trade.
                   </div>
                   <div className="field" style={{ width: "100%" }}>
-                    <label>Your Roblox / Telegram username (optional but helps)</label>
+                    <label>Your Roblox username (required)</label>
                     <input
                       type="text"
-                      placeholder="e.g. @yourhandle"
+                      placeholder="e.g. yourRobloxName"
                       value={buyerContact}
                       onChange={(e) => setBuyerContact(e.target.value)}
+                      required
                     />
                   </div>
-                  <button className="btn" style={{ width: "100%", justifyContent: "center" }} onClick={submitClaim} disabled={claimState === "sending"}>
+                  <button
+                    className="btn"
+                    style={{ width: "100%", justifyContent: "center" }}
+                    onClick={submitClaim}
+                    disabled={claimState === "sending" || !buyerContact.trim()}
+                  >
                     {claimState === "sending" ? "Sending…" : "I've paid — notify seller"}
                   </button>
                   {claimState === "error" && <div className="error-text">Something went wrong — try again in a moment.</div>}
