@@ -14,6 +14,7 @@ function gameMeta(gameId) {
 function formatPrice(price, currency) {
   const n = Number(price);
   if (currency === "KHR") return `៛${n.toLocaleString()}`;
+  if (n > 0 && n < 0.01) return `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}`;
   return `$${n.toFixed(2)}`;
 }
 

@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
     const isUnitPricing = item.pricing_mode === "unit";
     const packs = Math.max(1, Math.floor(Number(qty) || 1));
-    const totalPrice = Math.round(Number(item.price) * packs * 100) / 100;
+    const totalPrice = Math.round(Number(item.price) * packs * 10000) / 10000;
 
     if (item.stock !== null && item.stock !== undefined) {
       const unitsRequested = isUnitPricing ? packs * item.unit_amount : packs;

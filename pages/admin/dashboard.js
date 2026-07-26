@@ -15,6 +15,7 @@ function gameMeta(gameId) {
 function formatPrice(price, currency) {
   const n = Number(price);
   if (currency === "KHR") return `៛${n.toLocaleString()}`;
+  if (n > 0 && n < 0.01) return `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}`;
   return `$${n.toFixed(2)}`;
 }
 
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
@@ -89,6 +91,32 @@ export default function Dashboard() {
       pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "",
     });
     setImgError("");
+    setEditingId(null);
+  }
+
+  function openAddForm() {
+    resetForm();
+    setShowForm(true);
+  }
+
+  function openEditForm(item) {
+    const isPresetGame = GAME_PRESETS.some((g) => g.id === item.game && g.id !== "other");
+    setForm({
+      name: item.name || "",
+      game: isPresetGame ? item.game : "other",
+      customGame: isPresetGame ? "" : (item.game_label || ""),
+      price: item.price ?? "",
+      currency: item.currency || "USD",
+      description: item.description || "",
+      image: item.image || null,
+      pricingMode: item.pricing_mode === "unit" ? "unit" : "fixed",
+      unitLabel: item.unit_label || "",
+      unitAmount: item.unit_amount ?? "",
+      stock: item.stock === null || item.stock === undefined ? "" : item.stock,
+    });
+    setImgError("");
+    setEditingId(item.id);
+    setShowForm(true);
   }
 
   async function handleImageChange(e) {
@@ -107,35 +135,40 @@ export default function Dashboard() {
     }
   }
 
-  async function handleAddItem(e) {
+  async function handleSaveItem(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.price) return;
     if (form.pricingMode === "unit" && (!form.unitLabel.trim() || !form.unitAmount)) return;
     setSaving(true);
     const gameLabel = form.game === "other" ? (form.customGame.trim() || "Other game") : gameMeta(form.game).label;
+    const payload = {
+      name: form.name.trim(),
+      game: form.game,
+      gameLabel,
+      game_label: gameLabel,
+      price: form.price,
+      currency: form.currency,
+      description: form.description.trim(),
+      image: form.image,
+      pricingMode: form.pricingMode,
+      pricing_mode: form.pricingMode === "unit" ? "unit" : "fixed",
+      unitLabel: form.pricingMode === "unit" ? form.unitLabel.trim() : null,
+      unit_label: form.pricingMode === "unit" ? form.unitLabel.trim() : null,
+      unitAmount: form.pricingMode === "unit" ? form.unitAmount : null,
+      unit_amount: form.pricingMode === "unit" ? form.unitAmount : null,
+      stock: form.stock === "" ? null : form.stock,
+    };
     try {
-      const res = await fetch("/api/items", {
-        method: "POST",
+      const res = await fetch(editingId ? `/api/items/${editingId}` : "/api/items", {
+        method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          game: form.game,
-          gameLabel,
-          price: form.price,
-          currency: form.currency,
-          description: form.description.trim(),
-          image: form.image,
-          pricingMode: form.pricingMode,
-          unitLabel: form.pricingMode === "unit" ? form.unitLabel.trim() : null,
-          unitAmount: form.pricingMode === "unit" ? form.unitAmount : null,
-          stock: form.stock === "" ? null : form.stock,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("failed");
       await loadAll();
       resetForm();
       setShowForm(false);
-      showToast("Listed! It's live on your storefront.");
+      showToast(editingId ? "Listing updated." : "Listed! It's live on your storefront.");
     } catch (e) {
       showToast("Couldn't save that listing — try again.", true);
     } finally {
@@ -213,7 +246,7 @@ export default function Dashboard() {
           <b>{items.filter((i) => !i.sold).length}</b> listed &nbsp;·&nbsp;
           <b>{pendingOrders.length}</b> pending claim{pendingOrders.length === 1 ? "" : "s"}
         </div>
-        <button className="add-btn" onClick={() => setShowForm(true)}>+ List new item</button>
+        <button className="add-btn" onClick={openAddForm}>+ List new item</button>
       </div>
 
       <section className="dash-section">
@@ -290,6 +323,7 @@ export default function Dashboard() {
                       </div>
                     )}
                     <div className="action-row">
+                      <button className="btn-secondary" onClick={() => openEditForm(it)}>Edit</button>
                       <button className="btn-secondary" onClick={() => toggleSold(it)}>
                         {it.sold ? "Mark available" : "Mark sold"}
                       </button>
@@ -304,12 +338,12 @@ export default function Dashboard() {
       </section>
 
       {showForm && (
-        <div className="overlay" onClick={() => setShowForm(false)}>
+        <div className="overlay" onClick={() => { setShowForm(false); resetForm(); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowForm(false)}>✕</button>
-            <form className="form-grid" onSubmit={handleAddItem}>
+            <button className="modal-close" onClick={() => { setShowForm(false); resetForm(); }}>✕</button>
+            <form className="form-grid" onSubmit={handleSaveItem}>
               <div className="vault-sub" style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, color: "var(--text)" }}>
-                List a new item
+                {editingId ? "Edit listing" : "List a new item"}
               </div>
 
               <div className="field">
@@ -374,7 +408,7 @@ export default function Dashboard() {
               <div className="row-2">
                 <div className="field">
                   <label>{form.pricingMode === "unit" ? "Price per pack" : "Price"}</label>
-                  <input type="number" step="0.01" min="0" placeholder="0.00" value={form.price}
+                  <input type="number" step="0.0001" min="0" placeholder="0.00" value={form.price}
                     onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} required />
                 </div>
                 <div className="field">
@@ -421,7 +455,7 @@ export default function Dashboard() {
               </div>
 
               <button className="btn" type="submit" disabled={saving} style={{ justifyContent: "center" }}>
-                {saving ? "Saving…" : "Add to vault"}
+                {saving ? "Saving…" : editingId ? "Save changes" : "Add to vault"}
               </button>
             </form>
           </div>

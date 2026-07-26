@@ -206,7 +206,8 @@ a { color: inherit; }
 .qty-total { font-family: "Baloo 2", sans-serif; font-size: 13.5px; color: var(--text); text-align: center; }
 .qty-total b { color: #b8862e; }
 
-.action-row { display: flex; gap: 10px; }
+.action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.action-row .btn-secondary, .action-row .btn-danger { flex: 1 1 auto; min-width: 74px; }
 .btn-secondary, .btn-danger {
   flex: 1; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13px; border-radius: 999px;
   padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
