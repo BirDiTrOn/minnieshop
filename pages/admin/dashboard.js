@@ -203,6 +203,26 @@ export default function Dashboard() {
     }
   }
 
+  async function moveItem(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    const reordered = [...items];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, moved);
+    setItems(reordered);
+    try {
+      const res = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reorder: reordered.map((it) => it.id) }),
+      });
+      if (!res.ok) throw new Error("failed");
+    } catch (e) {
+      showToast("Couldn't save the new order — try again.", true);
+      await loadAll();
+    }
+  }
+
   async function updateOrderStatus(order, status) {
     const res = await fetch(`/api/orders/${order.id}`, {
       method: "PATCH",
@@ -252,95 +272,101 @@ export default function Dashboard() {
         <button className="add-btn" onClick={openAddForm}>+ List new item</button>
       </div>
 
-      <section className="dash-section">
-        <h2>Payment claims {pendingOrders.length > 0 && <span className="status-badge status-pending">{pendingOrders.length} new</span>}</h2>
-        {loading ? (
-          <div className="empty-state">Loading…</div>
-        ) : orders.length === 0 ? (
-          <div className="empty-state">No claims yet. They'll show up here the moment a buyer says they've paid.</div>
-        ) : (
-          orders.map((o) => (
-            <div className="order-row" key={o.id}>
-              <div className="order-main">
-                <div className="order-name">
-                  {o.item_name} {o.qty > 1 && <span style={{ color: "var(--muted)" }}>× {o.qty}</span>} —{" "}
-                  {formatPrice(o.total_price ?? o.price, o.currency)}
+      <div className="dash-columns">
+        <section className="dash-section">
+          <h2>Payment claims {pendingOrders.length > 0 && <span className="status-badge status-pending">{pendingOrders.length} new</span>}</h2>
+          {loading ? (
+            <div className="empty-state">Loading…</div>
+          ) : orders.length === 0 ? (
+            <div className="empty-state">No claims yet. They'll show up here the moment a buyer says they've paid.</div>
+          ) : (
+            orders.map((o) => (
+              <div className="order-row" key={o.id}>
+                <div className="order-main">
+                  <div className="order-name">
+                    {o.item_name} {o.qty > 1 && <span style={{ color: "var(--muted)" }}>× {o.qty}</span>} —{" "}
+                    {formatPrice(o.total_price ?? o.price, o.currency)}
+                  </div>
+                  <div className="order-meta">
+                    {o.buyer_contact ? `Roblox: ${o.buyer_contact}` : "No Roblox username"}
+                    {o.telegram_contact ? ` · Telegram: ${o.telegram_contact}` : ""} ·{" "}
+                    {new Date(o.created_at).toLocaleString()}
+                  </div>
                 </div>
-                <div className="order-meta">
-                  {o.buyer_contact ? `Roblox: ${o.buyer_contact}` : "No Roblox username"}
-                  {o.telegram_contact ? ` · Telegram: ${o.telegram_contact}` : ""} ·{" "}
-                  {new Date(o.created_at).toLocaleString()}
-                </div>
+                {o.status === "pending" ? (
+                  <div className="order-actions">
+                    <button className="confirm" onClick={() => updateOrderStatus(o, "confirmed")}>Confirm</button>
+                    <button className="reject" onClick={() => updateOrderStatus(o, "rejected")}>Reject</button>
+                  </div>
+                ) : (
+                  <span className={`status-badge status-${o.status}`}>{o.status}</span>
+                )}
               </div>
-              {o.status === "pending" ? (
-                <div className="order-actions">
-                  <button className="confirm" onClick={() => updateOrderStatus(o, "confirmed")}>Confirm</button>
-                  <button className="reject" onClick={() => updateOrderStatus(o, "rejected")}>Reject</button>
-                </div>
-              ) : (
-                <span className={`status-badge status-${o.status}`}>{o.status}</span>
-              )}
-            </div>
-          ))
-        )}
-      </section>
+            ))
+          )}
+        </section>
 
-      <section className="dash-section">
-        <h2>Your listings</h2>
-        {loading ? (
-          <div className="empty-state">Loading…</div>
-        ) : items.length === 0 ? (
-          <div className="empty-state">
-            <h3>Nothing listed yet</h3>
-            <div>Tap "List new item" to add your first one.</div>
-          </div>
-        ) : (
-          <div className="grid">
-            {items.map((it) => {
-              const meta = gameMeta(it.game);
-              return (
-                <div key={it.id} className="item-card" style={{ "--card-accent": meta.accent, cursor: "default" }}>
-                  <div className={`item-thumb ${it.sold ? "sold" : ""}`}>
-                    {it.sold && <span className="sold-badge">SOLD</span>}
-                    <span className="game-tag" style={{ color: meta.accent }}>{it.game_label}</span>
-                    {it.image ? (
-                      <img src={it.image} alt={it.name} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>
-                        no photo
-                      </div>
-                    )}
-                  </div>
-                  <div className="item-body">
-                    <div className="item-name">{it.name}</div>
-                    <div className="item-foot">
-                      <span className="price-ticket">
-                        {it.pricing_mode === "unit" && it.unit_amount
-                          ? `${Number(it.unit_amount).toLocaleString()} ${it.unit_label} = ${formatPrice(it.price, it.currency)}`
-                          : formatPrice(it.price, it.currency)}
-                      </span>
+        <section className="dash-section">
+          <h2>Your listings</h2>
+          {loading ? (
+            <div className="empty-state">Loading…</div>
+          ) : items.length === 0 ? (
+            <div className="empty-state">
+              <h3>Nothing listed yet</h3>
+              <div>Tap "List new item" to add your first one.</div>
+            </div>
+          ) : (
+            <div className="dash-item-list">
+              {items.map((it, index) => {
+                const meta = gameMeta(it.game);
+                return (
+                  <div key={it.id} className="dash-item-row" style={{ "--card-accent": meta.accent }}>
+                    <div className="move-col">
+                      <button type="button" className="move-btn" title="Move earlier" onClick={() => moveItem(index, -1)} disabled={index === 0}>▲</button>
+                      <button type="button" className="move-btn" title="Move later" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>▼</button>
                     </div>
-                    {it.stock !== null && it.stock !== undefined && (
-                      <div className="order-meta" style={{ marginTop: -4 }}>
-                        {it.stock > 0
-                          ? `${Number(it.stock).toLocaleString()} ${it.pricing_mode === "unit" ? it.unit_label : "in stock"} left`
-                          : "Out of stock"}
+                    <div className={`dash-item-thumb ${it.sold ? "sold" : ""}`}>
+                      {it.image ? (
+                        <img src={it.image} alt={it.name} />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 10 }}>no photo</div>
+                      )}
+                      {it.sold && <span className="sold-badge-sm">SOLD</span>}
+                    </div>
+                    <div className="dash-item-body">
+                      <div className="dash-item-top">
+                        <span className="item-row-name">{it.name}</span>
+                        <span className="game-tag-inline" style={{ color: meta.accent }}>{it.game_label}</span>
                       </div>
-                    )}
-                    <div className="action-row">
-                      <button className="btn-secondary" onClick={() => openEditForm(it)}>Edit</button>
-                      <button className="btn-secondary" onClick={() => toggleSold(it)}>
-                        {it.sold ? "Mark available" : "Mark sold"}
-                      </button>
-                      <button className="btn-danger" onClick={() => deleteItem(it)}>Remove</button>
+                      <div className="dash-item-mid">
+                        <span className="price-ticket">
+                          {it.pricing_mode === "unit" && it.unit_amount
+                            ? `${Number(it.unit_amount).toLocaleString()} ${it.unit_label} = ${formatPrice(it.price, it.currency)}`
+                            : formatPrice(it.price, it.currency)}
+                        </span>
+                        {it.stock !== null && it.stock !== undefined && (
+                          <span className="item-row-stock">
+                            {it.stock > 0
+                              ? `${Number(it.stock).toLocaleString()} ${it.pricing_mode === "unit" ? it.unit_label : "left"}`
+                              : "Out of stock"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="action-row">
+                        <button className="btn-secondary" onClick={() => openEditForm(it)}>Edit</button>
+                        <button className="btn-secondary" onClick={() => toggleSold(it)}>
+                          {it.sold ? "Mark available" : "Mark sold"}
+                        </button>
+                        <button className="btn-danger" onClick={() => deleteItem(it)}>Remove</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
       </section>
+      </div>
 
       {showForm && (
         <div className="overlay" onClick={() => { setShowForm(false); resetForm(); }}>
