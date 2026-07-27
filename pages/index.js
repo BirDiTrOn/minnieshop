@@ -148,40 +148,38 @@ export default function Storefront() {
           <div>Check back soon — new items get added regularly.</div>
         </div>
       ) : (
-        <div className="grid">
+        <div className="item-row-list">
           {filtered.map((it) => {
             const meta = gameMeta(it.game);
             return (
-              <div key={it.id} className="item-card" style={{ "--card-accent": meta.accent }} onClick={() => openItem(it)}>
-                <div className={`item-thumb ${isUnavailable(it) ? "sold" : ""}`}>
-                  {isUnavailable(it) && <span className="sold-badge">{isOutOfStock(it) && !it.sold ? "OUT OF STOCK" : "SOLD"}</span>}
-                  <span className="game-tag" style={{ color: meta.accent }}>{it.game_label}</span>
-                  <div className="corner-frame">
-                    <span className="cf-arm cf-tl" style={{ borderColor: meta.accent }} />
-                    <span className="cf-arm cf-tr" style={{ borderColor: meta.accent }} />
-                    <span className="cf-arm cf-bl" style={{ borderColor: meta.accent }} />
-                    <span className="cf-arm cf-br" style={{ borderColor: meta.accent }} />
-                    {it.image ? (
-                      <img src={it.image} alt={it.name} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>
-                        no photo
-                      </div>
-                    )}
-                  </div>
+              <div key={it.id} className="item-row" style={{ "--card-accent": meta.accent }} onClick={() => openItem(it)}>
+                <div className={`item-row-thumb ${isUnavailable(it) ? "sold" : ""}`}>
+                  {it.image ? (
+                    <img src={it.image} alt={it.name} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 10 }}>
+                      no photo
+                    </div>
+                  )}
+                  {isUnavailable(it) && (
+                    <span className="sold-badge-sm">{isOutOfStock(it) && !it.sold ? "OUT" : "SOLD"}</span>
+                  )}
                 </div>
-                <div className="item-body">
-                  <div className="item-name">{it.name}</div>
-                  <div className="item-foot">
+                <div className="item-row-body">
+                  <div className="item-row-top">
+                    <span className="item-row-name">{it.name}</span>
+                    <span className="game-tag-inline" style={{ color: meta.accent }}>{it.game_label}</span>
+                  </div>
+                  <div className="item-row-bottom">
                     <span className="price-ticket">
                       {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
                     </span>
-                    <span style={{ color: "var(--muted)", fontSize: 13 }}>›</span>
+                    {stockLabel(it) && !it.sold && (
+                      <span className="item-row-stock">{stockLabel(it)}</span>
+                    )}
                   </div>
-                  {stockLabel(it) && !it.sold && (
-                    <div className="order-meta" style={{ marginTop: -4 }}>{stockLabel(it)}</div>
-                  )}
                 </div>
+                <span className="item-row-arrow">›</span>
               </div>
             );
           })}
