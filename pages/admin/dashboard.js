@@ -60,7 +60,7 @@ export default function Dashboard() {
 
   const [form, setForm] = useState({
     name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
-    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "",
+    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "",
   });
   const [imgError, setImgError] = useState("");
 
@@ -88,7 +88,7 @@ export default function Dashboard() {
   function resetForm() {
     setForm({
       name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
-      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "",
+      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "",
     });
     setImgError("");
     setEditingId(null);
@@ -113,6 +113,7 @@ export default function Dashboard() {
       unitLabel: item.unit_label || "",
       unitAmount: item.unit_amount ?? "",
       stock: item.stock === null || item.stock === undefined ? "" : item.stock,
+      minQty: item.min_qty === null || item.min_qty === undefined || Number(item.min_qty) === 1 ? "" : item.min_qty,
     });
     setImgError("");
     setEditingId(item.id);
@@ -157,6 +158,8 @@ export default function Dashboard() {
       unitAmount: form.pricingMode === "unit" ? form.unitAmount : null,
       unit_amount: form.pricingMode === "unit" ? form.unitAmount : null,
       stock: form.stock === "" ? null : form.stock,
+      minQty: form.minQty === "" ? 1 : form.minQty,
+      min_qty: form.minQty === "" ? 1 : form.minQty,
     };
     try {
       const res = await fetch(editingId ? `/api/items/${editingId}` : "/api/items", {
@@ -197,6 +200,26 @@ export default function Dashboard() {
       showToast("Listing removed.");
     } else {
       showToast("Couldn't remove that item.", true);
+    }
+  }
+
+  async function moveItem(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    const reordered = [...items];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, moved);
+    setItems(reordered);
+    try {
+      const res = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reorder: reordered.map((it) => it.id) }),
+      });
+      if (!res.ok) throw new Error("failed");
+    } catch (e) {
+      showToast("Couldn't save the new order — try again.", true);
+      await loadAll();
     }
   }
 
@@ -293,13 +316,33 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid">
-            {items.map((it) => {
+            {items.map((it, index) => {
               const meta = gameMeta(it.game);
               return (
                 <div key={it.id} className="item-card" style={{ "--card-accent": meta.accent, cursor: "default" }}>
                   <div className={`item-thumb ${it.sold ? "sold" : ""}`}>
                     {it.sold && <span className="sold-badge">SOLD</span>}
                     <span className="game-tag" style={{ color: meta.accent }}>{it.game_label}</span>
+                    <div className="move-controls">
+                      <button
+                        type="button"
+                        className="move-btn"
+                        title="Move earlier"
+                        onClick={() => moveItem(index, -1)}
+                        disabled={index === 0}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        className="move-btn"
+                        title="Move later"
+                        onClick={() => moveItem(index, 1)}
+                        disabled={index === items.length - 1}
+                      >
+                        ▼
+                      </button>
+                    </div>
                     {it.image ? (
                       <img src={it.image} alt={it.name} />
                     ) : (
@@ -437,6 +480,18 @@ export default function Dashboard() {
                   placeholder="Leave blank for unlimited / not tracked"
                   value={form.stock}
                   onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                />
+              </div>
+
+              <div className="field">
+                <label>Minimum purchase {form.pricingMode === "unit" ? "(fewest packs a buyer must buy)" : "(fewest copies a buyer must buy)"} — optional</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Leave blank for no minimum (1)"
+                  value={form.minQty}
+                  onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
                 />
               </div>
 

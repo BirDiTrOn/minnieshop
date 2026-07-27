@@ -48,6 +48,11 @@ function maxPacks(item) {
   return Math.max(1, Math.floor(Number(item.stock)));
 }
 
+function minPacks(item) {
+  const n = Math.max(1, Math.floor(Number(item.min_qty) || 1));
+  return n;
+}
+
 function stockLabel(item) {
   if (!hasStockTracking(item)) return null;
   if (isOutOfStock(item)) return "Out of stock";
@@ -76,7 +81,7 @@ export default function Storefront() {
     setSelected(item);
     setBuyerContact("");
     setTelegramContact("");
-    setPacks(1);
+    setPacks(minPacks(item));
     setClaimState("idle");
   }
 
@@ -223,16 +228,18 @@ export default function Storefront() {
                     <div className="qty-picker">
                       <span className="qty-picker-label">{isUnitItem(selected) ? "How many packs?" : "How many?"}</span>
                       <div className="qty-stepper">
-                        <button type="button" onClick={() => setPacks((p) => Math.max(1, p - 1))}>−</button>
+                        <button type="button" onClick={() => setPacks((p) => Math.max(minPacks(selected), p - 1))}>−</button>
                         <input
                           type="number"
-                          min="1"
+                          min={minPacks(selected)}
                           max={maxPacks(selected) || undefined}
                           value={packs}
                           onChange={(e) => {
                             const cap = maxPacks(selected);
-                            const v = Math.max(1, Math.floor(Number(e.target.value) || 1));
-                            setPacks(cap ? Math.min(v, cap) : v);
+                            const floor = minPacks(selected);
+                            let v = Math.max(floor, Math.floor(Number(e.target.value) || floor));
+                            if (cap) v = Math.min(v, cap);
+                            setPacks(v);
                           }}
                         />
                         <button
@@ -245,6 +252,11 @@ export default function Storefront() {
                           +
                         </button>
                       </div>
+                      {minPacks(selected) > 1 && (
+                        <div className="qty-picker-label" style={{ marginTop: -2 }}>
+                          Minimum purchase: {minPacks(selected)}{isUnitItem(selected) ? " packs" : ""}
+                        </div>
+                      )}
                       {isUnitItem(selected) ? (
                         <div className="qty-total">
                           = {(packs * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}

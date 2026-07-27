@@ -156,6 +156,18 @@ a { color: inherit; }
   padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.85); z-index: 2;
   box-shadow: 0 2px 6px rgba(70,66,95,0.12);
 }
+.move-controls {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.move-btn {
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: rgba(255,255,255,0.9); color: var(--text);
+  font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(70,66,95,0.12);
+}
+.move-btn:hover { background: #fff; color: var(--accent); }
+.move-btn:disabled { opacity: 0.35; cursor: default; }
 .corner-frame { position: relative; width: 100%; height: 100%; }
 .cf-arm { position: absolute; width: 14px; height: 14px; border-style: solid; border-width: 0; opacity: 0.85; }
 .cf-tl { top: 8px; left: 8px; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }

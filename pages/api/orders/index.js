@@ -21,8 +21,13 @@ export default async function handler(req, res) {
     if (itemErr || !item) return res.status(404).json({ error: "Item not found" });
 
     const isUnitPricing = item.pricing_mode === "unit";
-    const packs = Math.max(1, Math.floor(Number(qty) || 1));
+    const minQty = Math.max(1, Math.floor(Number(item.min_qty) || 1));
+    const packs = Math.max(minQty, Math.floor(Number(qty) || minQty));
     const totalPrice = Math.round(Number(item.price) * packs * 10000) / 10000;
+
+    if (packs < minQty) {
+      return res.status(400).json({ error: `Minimum purchase for this item is ${minQty}` });
+    }
 
     if (item.stock !== null && item.stock !== undefined) {
       const unitsRequested = isUnitPricing ? packs * item.unit_amount : packs;
