@@ -203,26 +203,6 @@ export default function Dashboard() {
     }
   }
 
-  async function moveItem(index, direction) {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= items.length) return;
-    const reordered = [...items];
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(targetIndex, 0, moved);
-    setItems(reordered);
-    try {
-      const res = await fetch("/api/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reorder: reordered.map((it) => it.id) }),
-      });
-      if (!res.ok) throw new Error("failed");
-    } catch (e) {
-      showToast("Couldn't save the new order — try again.", true);
-      await loadAll();
-    }
-  }
-
   async function updateOrderStatus(order, status) {
     const res = await fetch(`/api/orders/${order.id}`, {
       method: "PATCH",
@@ -316,33 +296,13 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid">
-            {items.map((it, index) => {
+            {items.map((it) => {
               const meta = gameMeta(it.game);
               return (
                 <div key={it.id} className="item-card" style={{ "--card-accent": meta.accent, cursor: "default" }}>
                   <div className={`item-thumb ${it.sold ? "sold" : ""}`}>
                     {it.sold && <span className="sold-badge">SOLD</span>}
                     <span className="game-tag" style={{ color: meta.accent }}>{it.game_label}</span>
-                    <div className="move-controls">
-                      <button
-                        type="button"
-                        className="move-btn"
-                        title="Move earlier"
-                        onClick={() => moveItem(index, -1)}
-                        disabled={index === 0}
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        className="move-btn"
-                        title="Move later"
-                        onClick={() => moveItem(index, 1)}
-                        disabled={index === items.length - 1}
-                      >
-                        ▼
-                      </button>
-                    </div>
                     {it.image ? (
                       <img src={it.image} alt={it.name} />
                     ) : (
