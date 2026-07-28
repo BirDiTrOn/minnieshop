@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [items, setItems] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [claimsCollapsed, setClaimsCollapsed] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -279,8 +280,16 @@ export default function Dashboard() {
 
       <div className="dash-columns">
         <section className="dash-section">
-          <h2>Payment claims {pendingOrders.length > 0 && <span className="status-badge status-pending">{pendingOrders.length} new</span>}</h2>
-          {loading ? (
+          <h2
+            style={{ cursor: "pointer", justifyContent: "space-between", width: "100%" }}
+            onClick={() => setClaimsCollapsed((c) => !c)}
+          >
+            <span>
+              Payment claims {pendingOrders.length > 0 && <span className="status-badge status-pending">{pendingOrders.length} new</span>}
+            </span>
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>{claimsCollapsed ? "▸ Show" : "▾ Hide"}</span>
+          </h2>
+          {claimsCollapsed ? null : loading ? (
             <div className="empty-state">Loading…</div>
           ) : orders.length === 0 ? (
             <div className="empty-state">No claims yet. They'll show up here the moment a buyer says they've paid.</div>
