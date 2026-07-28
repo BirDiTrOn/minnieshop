@@ -75,7 +75,7 @@ export default function Storefront() {
   const [hydrated, setHydrated] = useState(false);
 
   const [selected, setSelected] = useState(null);
-  const [viewQty, setViewQty] = useState(1);
+  const [viewQty, setViewQty] = useState("1");
 
   const [buyerContact, setBuyerContact] = useState("");
   const [telegramContact, setTelegramContact] = useState("");
@@ -151,7 +151,7 @@ export default function Storefront() {
 
   function openItem(item) {
     setSelected(item);
-    setViewQty(minPacks(item));
+    setViewQty(String(minPacks(item)));
   }
 
   function quickAdd(e, item) {
@@ -330,33 +330,34 @@ export default function Storefront() {
                   <div className="qty-picker" style={{ borderBottom: "none", marginBottom: 0, paddingBottom: 0 }}>
                     <span className="qty-picker-label">{isUnitItem(selected) ? "How many packs?" : "How many?"}</span>
                     <div className="qty-stepper">
-                      <button type="button" onClick={() => setViewQty((q) => clamp(selected, q - 1))}>−</button>
+                      <button type="button" onClick={() => setViewQty((q) => String(clamp(selected, Number(q || 0) - 1)))}>−</button>
                       <input
                         type="number"
                         min={minPacks(selected)}
                         max={maxPacks(selected) || undefined}
                         value={viewQty}
-                        onChange={(e) => setViewQty(clamp(selected, Math.floor(Number(e.target.value) || minPacks(selected))))}
+                        onChange={(e) => setViewQty(e.target.value)}
+                        onBlur={(e) => setViewQty(String(clamp(selected, Math.floor(Number(e.target.value) || minPacks(selected)))))}
                       />
-                      <button type="button" onClick={() => setViewQty((q) => clamp(selected, q + 1))}>+</button>
+                      <button type="button" onClick={() => setViewQty((q) => String(clamp(selected, Number(q || 0) + 1)))}>+</button>
                     </div>
                     {minPacks(selected) > 1 && (
                       <div className="qty-picker-label">Minimum purchase: {minPacks(selected)}{isUnitItem(selected) ? " packs" : ""}</div>
                     )}
                     {isUnitItem(selected) ? (
                       <div className="qty-total">
-                        = {(viewQty * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
-                        <b>{formatPrice(viewQty * selected.price, selected.currency)}</b>
+                        = {((Number(viewQty) || 0) * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
+                        <b>{formatPrice((Number(viewQty) || 0) * selected.price, selected.currency)}</b>
                       </div>
                     ) : (
-                      <div className="qty-total">Total: <b>{formatPrice(viewQty * selected.price, selected.currency)}</b></div>
+                      <div className="qty-total">Total: <b>{formatPrice((Number(viewQty) || 0) * selected.price, selected.currency)}</b></div>
                     )}
                   </div>
                   <button
                     className="btn"
                     style={{ width: "100%", justifyContent: "center" }}
                     onClick={() => {
-                      addToCart(selected, viewQty);
+                      addToCart(selected, clamp(selected, Math.floor(Number(viewQty) || minPacks(selected))));
                       setSelected(null);
                     }}
                   >
