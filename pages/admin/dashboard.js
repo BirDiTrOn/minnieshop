@@ -230,8 +230,13 @@ export default function Dashboard() {
       body: JSON.stringify({ status }),
     });
     if (res.ok) {
+      const data = await res.json();
       await loadAll();
-      showToast(status === "confirmed" ? "Order confirmed — item marked sold." : "Claim rejected.");
+      if (status === "confirmed") showToast("Order confirmed — stock updated.");
+      else if (status === "rejected") showToast("Claim rejected.");
+      else if (status === "delivered") {
+        showToast(data.notified ? "Buyer notified on Telegram! 🎉" : (data.notifyError || "Marked delivered."));
+      }
     } else {
       showToast("Couldn't update that claim.", true);
     }
@@ -280,29 +285,48 @@ export default function Dashboard() {
           ) : orders.length === 0 ? (
             <div className="empty-state">No claims yet. They'll show up here the moment a buyer says they've paid.</div>
           ) : (
-            orders.map((o) => (
-              <div className="order-row" key={o.id}>
-                <div className="order-main">
-                  <div className="order-name">
-                    {o.item_name} {o.qty > 1 && <span style={{ color: "var(--muted)" }}>× {o.qty}</span>} —{" "}
-                    {formatPrice(o.total_price ?? o.price, o.currency)}
+            orders.map((o) => {
+              const cartLines = Array.isArray(o.items) && o.items.length ? o.items : null;
+              return (
+                <div className="order-row" key={o.id}>
+                  <div className="order-main">
+                    <div className="order-name">
+                      {o.item_name} {o.qty > 1 && <span style={{ color: "var(--muted)" }}>× {o.qty}</span>} —{" "}
+                      {formatPrice(o.total_price ?? o.price, o.currency)}
+                    </div>
+                    {cartLines && cartLines.length > 1 && (
+                      <div className="order-meta" style={{ marginTop: 2 }}>
+                        {cartLines.map((l) => `${l.name} ×${l.qty}`).join(" · ")}
+                      </div>
+                    )}
+                    <div className="order-meta">
+                      {o.buyer_contact ? `Roblox: ${o.buyer_contact}` : "No Roblox username"}
+                      {" · "}
+                      {o.telegram_username
+                        ? `Telegram: @${o.telegram_username} (logged in ✓)`
+                        : o.telegram_contact
+                        ? `Telegram: ${o.telegram_contact}`
+                        : "No Telegram"}
+                      {" · "}
+                      {new Date(o.created_at).toLocaleString()}
+                    </div>
                   </div>
-                  <div className="order-meta">
-                    {o.buyer_contact ? `Roblox: ${o.buyer_contact}` : "No Roblox username"}
-                    {o.telegram_contact ? ` · Telegram: ${o.telegram_contact}` : ""} ·{" "}
-                    {new Date(o.created_at).toLocaleString()}
-                  </div>
+                  {o.status === "pending" ? (
+                    <div className="order-actions">
+                      <button className="confirm" onClick={() => updateOrderStatus(o, "confirmed")}>Confirm</button>
+                      <button className="reject" onClick={() => updateOrderStatus(o, "rejected")}>Reject</button>
+                    </div>
+                  ) : o.status === "confirmed" ? (
+                    <div className="order-actions">
+                      <button className="confirm" onClick={() => updateOrderStatus(o, "delivered")}>Mark sent</button>
+                      <span className="status-badge status-confirmed">confirmed</span>
+                    </div>
+                  ) : (
+                    <span className={`status-badge status-${o.status}`}>{o.status}</span>
+                  )}
                 </div>
-                {o.status === "pending" ? (
-                  <div className="order-actions">
-                    <button className="confirm" onClick={() => updateOrderStatus(o, "confirmed")}>Confirm</button>
-                    <button className="reject" onClick={() => updateOrderStatus(o, "rejected")}>Reject</button>
-                  </div>
-                ) : (
-                  <span className={`status-badge status-${o.status}`}>{o.status}</span>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </section>
 

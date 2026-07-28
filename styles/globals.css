@@ -355,6 +355,7 @@ a { color: inherit; }
 .status-pending { background: rgba(243,194,107,0.2); color: #b8862e; }
 .status-confirmed { background: rgba(143,214,193,0.3); color: #2f8a6f; }
 .status-rejected { background: rgba(240,137,159,0.2); color: var(--coral); }
+.status-delivered { background: rgba(176,111,209,0.2); color: var(--accent); }
 .order-actions { display: flex; gap: 8px; }
 .order-actions button {
   font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px; border-radius: 999px;
@@ -370,3 +371,90 @@ a { color: inherit; }
   cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
 }
 .link-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Cart + Telegram login */
+.cart-btn {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13.5px;
+  color: var(--text); background: var(--panel); border: 1.5px solid var(--border);
+  padding: 9px 16px; border-radius: 999px; cursor: pointer;
+}
+.cart-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cart-badge {
+  position: absolute; top: -6px; right: -6px;
+  background: var(--coral); color: #fff; font-family: "Space Mono", monospace;
+  font-size: 10.5px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  box-shadow: 0 2px 6px rgba(70,66,95,0.2);
+}
+
+.quick-add-btn {
+  flex-shrink: 0;
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px;
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none; padding: 8px 12px; border-radius: 999px; cursor: pointer;
+  white-space: nowrap;
+}
+.quick-add-btn:hover { filter: brightness(1.05); }
+.quick-add-btn:disabled { opacity: 0.45; cursor: default; filter: none; }
+
+.cart-modal { max-width: 460px; }
+.cart-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 22px; max-height: 40vh; overflow-y: auto; }
+.cart-line {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px;
+}
+.cart-line-thumb {
+  width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--panel);
+}
+.cart-line-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cart-line-body { flex: 1; min-width: 0; }
+.cart-line-name {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13.5px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cart-line-price { font-family: "Space Mono", monospace; font-size: 12px; color: #b8862e; margin-top: 2px; }
+.cart-line-stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.cart-line-stepper button {
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--panel); color: var(--accent); font-size: 13px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.cart-line-stepper span {
+  font-family: "Space Mono", monospace; font-weight: 700; font-size: 12.5px; min-width: 22px; text-align: center;
+}
+.cart-line-remove {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+}
+.cart-line-remove:hover { color: var(--coral); }
+
+.cart-total-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 15px;
+  border-top: 1px dashed var(--border); margin-top: 4px;
+}
+.cart-total-row b { color: #b8862e; }
+
+.telegram-login-box {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px; border: 1.5px dashed var(--border); border-radius: 14px; background: var(--panel-2);
+  min-height: 44px; justify-content: center;
+}
+.telegram-login-hint { font-family: "Baloo 2", sans-serif; font-size: 12px; color: var(--muted); text-align: center; }
+
+.logged-in-pill {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(143,214,193,0.2); border: 1.5px solid var(--mint); border-radius: 999px;
+  padding: 9px 14px; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13px; color: #2f8a6f;
+}
+.logged-in-pill button {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 11.5px; color: var(--muted);
+  background: transparent; border: none; cursor: pointer; text-decoration: underline;
+}
+
+.manual-telegram-toggle {
+  font-family: "Baloo 2", sans-serif; font-weight: 600; font-size: 12px; color: var(--muted);
+  background: transparent; border: none; cursor: pointer; text-decoration: underline; text-align: center;
+}

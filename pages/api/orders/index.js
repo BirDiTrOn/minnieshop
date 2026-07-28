@@ -4,67 +4,95 @@ import { sendTelegramMessage } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method === "POST") {
-    const { itemId, buyerContact, telegramContact, qty } = req.body || {};
-    if (!itemId) return res.status(400).json({ error: "itemId is required" });
+    const { cartItems, buyerContact, telegramContact, telegramUserId, telegramUsername, telegramFirstName } =
+      req.body || {};
+
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      return res.status(400).json({ error: "Your cart is empty" });
+    }
     if (!buyerContact || !buyerContact.trim()) {
       return res.status(400).json({ error: "buyerContact (Roblox username) is required" });
     }
-    if (!telegramContact || !telegramContact.trim()) {
-      return res.status(400).json({ error: "telegramContact is required" });
+    if (!telegramUserId && (!telegramContact || !telegramContact.trim())) {
+      return res.status(400).json({ error: "A Telegram login or username is required" });
     }
 
-    const { data: item, error: itemErr } = await supabaseAdmin
-      .from("items")
-      .select("*")
-      .eq("id", itemId)
-      .single();
-    if (itemErr || !item) return res.status(404).json({ error: "Item not found" });
+    const ids = cartItems.map((c) => c.itemId).filter(Boolean);
+    const { data: dbItems, error: itemErr } = await supabaseAdmin.from("items").select("*").in("id", ids);
+    if (itemErr) return res.status(500).json({ error: itemErr.message });
 
-    const isUnitPricing = item.pricing_mode === "unit";
-    const minQty = Math.max(1, Math.floor(Number(item.min_qty) || 1));
-    const packs = Math.max(minQty, Math.floor(Number(qty) || minQty));
-    const totalPrice = Math.round(Number(item.price) * packs * 10000) / 10000;
+    const lines = [];
+    let total = 0;
+    let currency = "USD";
 
-    if (packs < minQty) {
-      return res.status(400).json({ error: `Minimum purchase for this item is ${minQty}` });
-    }
+    for (const cartLine of cartItems) {
+      const item = dbItems.find((i) => i.id === cartLine.itemId);
+      if (!item) return res.status(404).json({ error: "One of the items in your cart no longer exists" });
 
-    if (item.stock !== null && item.stock !== undefined) {
-      const unitsRequested = isUnitPricing ? packs * item.unit_amount : packs;
-      if (unitsRequested > Number(item.stock)) {
-        return res.status(400).json({ error: "Not enough stock left for that quantity" });
+      const isUnitPricing = item.pricing_mode === "unit";
+      const minQty = Math.max(1, Math.floor(Number(item.min_qty) || 1));
+      const qty = Math.max(minQty, Math.floor(Number(cartLine.qty) || minQty));
+
+      if (item.stock !== null && item.stock !== undefined) {
+        const unitsRequested = isUnitPricing ? qty * item.unit_amount : qty;
+        if (unitsRequested > Number(item.stock)) {
+          return res.status(400).json({ error: `Not enough stock left for "${item.name}"` });
+        }
       }
+
+      const lineTotal = Math.round(Number(item.price) * qty * 10000) / 10000;
+      total = Math.round((total + lineTotal) * 10000) / 10000;
+      currency = item.currency || currency;
+
+      lines.push({
+        item_id: item.id,
+        name: item.name,
+        game_label: item.game_label,
+        pricing_mode: item.pricing_mode,
+        unit_label: item.unit_label,
+        unit_amount: item.unit_amount,
+        price: item.price,
+        currency: item.currency,
+        qty,
+        line_total: lineTotal,
+      });
     }
+
+    const summaryName = lines.length === 1 ? lines[0].name : `${lines.length} items`;
+    const totalQty = lines.reduce((sum, l) => sum + l.qty, 0);
 
     const { data: order, error } = await supabaseAdmin
       .from("orders")
       .insert({
-        item_id: item.id,
-        item_name: item.name,
-        price: item.price,
-        currency: item.currency,
-        qty: packs,
-        total_price: totalPrice,
+        item_name: summaryName,
+        currency,
+        qty: totalQty,
+        total_price: total,
+        items: lines,
         buyer_contact: buyerContact || null,
         telegram_contact: telegramContact || null,
+        telegram_user_id: telegramUserId ? String(telegramUserId) : null,
+        telegram_username: telegramUsername || null,
+        telegram_first_name: telegramFirstName || null,
         status: "pending",
       })
       .select()
       .single();
     if (error) return res.status(500).json({ error: error.message });
 
-    const currencySign = item.currency === "KHR" ? "៛" : "$";
-    const quantityLine = isUnitPricing
-      ? `Quantity: ${packs} × ${item.unit_amount} ${item.unit_label} = ${packs * item.unit_amount} ${item.unit_label}\n`
-      : "";
+    const currencySign = currency === "KHR" ? "៛" : "$";
+    const itemLines = lines
+      .map((l) => `• ${l.name} × ${l.qty} — ${currencySign}${l.line_total}`)
+      .join("\n");
+    const telegramLine = telegramUsername
+      ? `Telegram: @${telegramUsername} (logged in)`
+      : `Telegram: ${telegramContact || "not provided"}`;
     const text =
       `New payment claim\n\n` +
-      `Item: ${item.name}\n` +
-      `Game: ${item.game_label}\n` +
-      quantityLine +
-      `Total: ${currencySign}${totalPrice}\n` +
+      `${itemLines}\n\n` +
+      `Total: ${currencySign}${total}\n` +
       `Roblox username: ${buyerContact || "not provided"}\n` +
-      `Telegram: ${telegramContact || "not provided"}\n\n` +
+      `${telegramLine}\n\n` +
       `Open your admin dashboard to confirm the trade.`;
 
     try {

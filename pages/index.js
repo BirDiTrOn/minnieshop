@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
 
 const GAME_PRESETS = [
-  { id: "grow-a-garden", label: "Grow a Garden 2", accent: "#5fb894", glow: "rgba(143,214,193,0.25)" },
-  { id: "blade-ball", label: "Blade Ball", accent: "#e2708b", glow: "rgba(240,137,159,0.2)" },
-  { id: "other", label: "Other game", accent: "#7699e0", glow: "rgba(147,183,240,0.2)" },
+  { id: "grow-a-garden", label: "Grow a Garden 2", accent: "#8fd6c1", glow: "rgba(143,214,193,0.25)" },
+  { id: "blade-ball", label: "Blade Ball", accent: "#f0899f", glow: "rgba(240,137,159,0.2)" },
+  { id: "other", label: "Other game", accent: "#93b7f0", glow: "rgba(147,183,240,0.2)" },
 ];
 
 function gameMeta(gameId) {
@@ -38,19 +38,14 @@ function isUnavailable(item) {
   return item.sold || isOutOfStock(item);
 }
 
-function showQtyPicker() {
-  return true;
+function minPacks(item) {
+  return Math.max(1, Math.floor(Number(item?.min_qty) || 1));
 }
 
 function maxPacks(item) {
-  if (!hasStockTracking(item)) return null;
+  if (!item || !hasStockTracking(item)) return null;
   if (isUnitItem(item)) return Math.max(1, Math.floor(Number(item.stock) / Number(item.unit_amount)));
   return Math.max(1, Math.floor(Number(item.stock)));
-}
-
-function minPacks(item) {
-  const n = Math.max(1, Math.floor(Number(item.min_qty) || 1));
-  return n;
 }
 
 function stockLabel(item) {
@@ -60,15 +55,38 @@ function stockLabel(item) {
   return isUnitItem(item) ? `${n.toLocaleString()} ${item.unit_label} left` : `${n.toLocaleString()} left`;
 }
 
+function readLocal(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
 export default function Storefront() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+
+  const [cart, setCart] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
   const [selected, setSelected] = useState(null);
+  const [viewQty, setViewQty] = useState(1);
+
   const [buyerContact, setBuyerContact] = useState("");
-  const [telegramContact, setTelegramContact] = useState("");
-  const [packs, setPacks] = useState(1);
-  const [claimState, setClaimState] = useState("idle"); // idle | sending | sent | error
+  const [telegramIdentity, setTelegramIdentity] = useState(null);
+  const [useManualTelegram, setUseManualTelegram] = useState(false);
+  const [telegramManual, setTelegramManual] = useState("");
+  const [checkoutState, setCheckoutState] = useState("idle"); // idle | sending | sent | error
+  const [checkoutError, setCheckoutError] = useState("");
+
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const widgetHostRef = useRef(null);
 
   useEffect(() => {
     fetch("/api/items")
@@ -77,28 +95,158 @@ export default function Storefront() {
       .finally(() => setLoading(false));
   }, []);
 
-  function openItem(item) {
-    setSelected(item);
-    setBuyerContact("");
-    setTelegramContact("");
-    setPacks(minPacks(item));
-    setClaimState("idle");
+  // Load anything saved from a previous visit.
+  useEffect(() => {
+    setCart(readLocal("minnieshop_cart", []));
+    setBuyerContact(readLocal("minnieshop_roblox", ""));
+    setTelegramIdentity(readLocal("minnieshop_tg", null));
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem("minnieshop_cart", JSON.stringify(cart));
+  }, [cart, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem("minnieshop_roblox", JSON.stringify(buyerContact));
+  }, [buyerContact, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem("minnieshop_tg", JSON.stringify(telegramIdentity));
+  }, [telegramIdentity, hydrated]);
+
+  // Inject the Telegram Login Widget when the cart is open and nobody's logged in yet.
+  useEffect(() => {
+    if (!cartOpen || telegramIdentity || useManualTelegram || !widgetHostRef.current) return;
+    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+    if (!botUsername) return;
+
+    widgetHostRef.current.innerHTML = "";
+    window.onTelegramAuth = async (user) => {
+      try {
+        const res = await fetch("/api/telegram-verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user),
+        });
+        const data = await res.json();
+        if (res.ok && data.identity) {
+          setTelegramIdentity(data.identity);
+          showToast("Logged in with Telegram!");
+        } else {
+          showToast("Telegram login didn't verify — try again.", true);
+        }
+      } catch (e) {
+        showToast("Telegram login failed — try again.", true);
+      }
+    };
+
+    const script = document.createElement("script");
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.async = true;
+    script.setAttribute("data-telegram-login", botUsername);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "10");
+    script.setAttribute("data-request-access", "write");
+    script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    widgetHostRef.current.appendChild(script);
+  }, [cartOpen, telegramIdentity, useManualTelegram]);
+
+  function showToast(msg, isError = false) {
+    setToast({ msg, isError });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2400);
   }
 
-  async function submitClaim() {
-    if (!selected || !buyerContact.trim() || !telegramContact.trim()) return;
-    setClaimState("sending");
+  function clamp(item, qty) {
+    const floor = minPacks(item);
+    const cap = maxPacks(item);
+    let v = Math.max(floor, Math.floor(qty || floor));
+    if (cap) v = Math.min(v, cap);
+    return v;
+  }
+
+  function addToCart(item, qty) {
+    if (isUnavailable(item)) return;
+    setCart((prev) => {
+      const existing = prev.find((l) => l.itemId === item.id);
+      if (existing) {
+        return prev.map((l) => (l.itemId === item.id ? { ...l, qty: clamp(item, l.qty + qty) } : l));
+      }
+      return [...prev, { itemId: item.id, qty: clamp(item, qty) }];
+    });
+    showToast(`Added ${item.name} to cart`);
+  }
+
+  function setCartQty(item, qty) {
+    setCart((prev) => prev.map((l) => (l.itemId === item.id ? { ...l, qty: clamp(item, qty) } : l)));
+  }
+
+  function removeCartLine(itemId) {
+    setCart((prev) => prev.filter((l) => l.itemId !== itemId));
+  }
+
+  function openItem(item) {
+    setSelected(item);
+    setViewQty(minPacks(item));
+  }
+
+  function quickAdd(e, item) {
+    e.stopPropagation();
+    addToCart(item, minPacks(item));
+  }
+
+  const cartLines = cart
+    .map((l) => ({ ...l, item: items.find((i) => i.id === l.itemId) }))
+    .filter((l) => l.item);
+  const cartCount = cartLines.length;
+  const cartTotal = cartLines.reduce((sum, l) => sum + Number(l.item.price) * l.qty, 0);
+  const cartCurrency = cartLines[0]?.item.currency || "USD";
+
+  async function logoutTelegram() {
+    await fetch("/api/telegram-logout", { method: "POST" });
+    setTelegramIdentity(null);
+  }
+
+  async function submitCheckout() {
+    if (cartLines.length === 0) return;
+    if (!buyerContact.trim()) return;
+    if (!telegramIdentity && !telegramManual.trim()) return;
+    setCheckoutState("sending");
+    setCheckoutError("");
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: selected.id, buyerContact, telegramContact, qty: packs }),
+        body: JSON.stringify({
+          cartItems: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
+          buyerContact,
+          telegramContact: telegramIdentity ? undefined : telegramManual,
+          telegramUserId: telegramIdentity?.id,
+          telegramUsername: telegramIdentity?.username,
+          telegramFirstName: telegramIdentity?.first_name,
+        }),
       });
-      if (!res.ok) throw new Error("failed");
-      setClaimState("sent");
+      const data = await res.json();
+      if (!res.ok) {
+        setCheckoutError(data.error || "Something went wrong.");
+        setCheckoutState("error");
+        return;
+      }
+      setCheckoutState("sent");
+      setCart([]);
     } catch (e) {
-      setClaimState("error");
+      setCheckoutError("Something went wrong — try again.");
+      setCheckoutState("error");
     }
+  }
+
+  function closeCart() {
+    setCartOpen(false);
+    if (checkoutState === "sent") setCheckoutState("idle");
   }
 
   const filtered = items.filter((it) => filter === "all" || it.game === filter);
@@ -110,6 +258,7 @@ export default function Storefront() {
         <title>Minnieshop — Roblox item shop</title>
         <link rel="icon" href="/favicon.png" />
       </Head>
+
       <header className="vault-header">
         <div className="vault-title-wrap">
           <img className="brand-badge" src="/logo.jpg" alt="Minnieshop" />
@@ -118,7 +267,13 @@ export default function Storefront() {
             <div className="vault-sub">Roblox items for sale — Grow a Garden 2, Blade Ball &amp; more 💜</div>
           </div>
         </div>
-        <div className="stat-pill"><b>{activeCount}</b> available</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="stat-pill"><b>{activeCount}</b> available</div>
+          <button className="cart-btn" onClick={() => setCartOpen(true)}>
+            🛒 Cart
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+          </button>
+        </div>
       </header>
 
       <div className="contact-row">
@@ -129,7 +284,7 @@ export default function Storefront() {
 
       <div className="toolbar">
         <div className="filters">
-          <button className={`filter-chip ${filter === "all" ? "active" : ""}`} style={filter === "all" ? { background: "#5fce7a" } : {}} onClick={() => setFilter("all")}>
+          <button className={`filter-chip ${filter === "all" ? "active" : ""}`} style={filter === "all" ? { background: "linear-gradient(135deg, var(--accent), var(--accent-2))" } : {}} onClick={() => setFilter("all")}>
             All items
           </button>
           {GAME_PRESETS.map((g) => (
@@ -184,13 +339,16 @@ export default function Storefront() {
                     )}
                   </div>
                 </div>
-                <span className="item-row-arrow">›</span>
+                {!isUnavailable(it) && (
+                  <button className="quick-add-btn" onClick={(e) => quickAdd(e, it)}>+ Add</button>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
+      {/* Item detail modal */}
       {selected && (
         <div className="overlay" onClick={() => setSelected(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -217,104 +375,177 @@ export default function Storefront() {
                     {isOutOfStock(selected) && !selected.sold ? "Out of stock" : "Already sold"}
                   </div>
                 </div>
-              ) : claimState === "sent" ? (
-                <div className="pay-panel">
-                  <div className="pay-label" style={{ color: "var(--accent)" }}>Seller notified</div>
-                  <div className="pay-hint">They'll reach out to confirm and hand over the item in-game. Hang tight.</div>
-                </div>
               ) : (
                 <div className="pay-panel">
-                  {showQtyPicker(selected) && (
-                    <div className="qty-picker">
-                      <span className="qty-picker-label">{isUnitItem(selected) ? "How many packs?" : "How many?"}</span>
-                      <div className="qty-stepper">
-                        <button type="button" onClick={() => setPacks((p) => Math.max(minPacks(selected), p - 1))}>−</button>
-                        <input
-                          type="number"
-                          min={minPacks(selected)}
-                          max={maxPacks(selected) || undefined}
-                          value={packs}
-                          onChange={(e) => {
-                            const cap = maxPacks(selected);
-                            const floor = minPacks(selected);
-                            let v = Math.max(floor, Math.floor(Number(e.target.value) || floor));
-                            if (cap) v = Math.min(v, cap);
-                            setPacks(v);
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cap = maxPacks(selected);
-                            setPacks((p) => (cap ? Math.min(p + 1, cap) : p + 1));
-                          }}
-                        >
-                          +
-                        </button>
-                      </div>
-                      {minPacks(selected) > 1 && (
-                        <div className="qty-picker-label" style={{ marginTop: -2 }}>
-                          Minimum purchase: {minPacks(selected)}{isUnitItem(selected) ? " packs" : ""}
-                        </div>
-                      )}
-                      {isUnitItem(selected) ? (
-                        <div className="qty-total">
-                          = {(packs * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
-                          <b>{formatPrice(packs * selected.price, selected.currency)}</b>
-                        </div>
-                      ) : (
-                        <div className="qty-total">
-                          Total: <b>{formatPrice(packs * selected.price, selected.currency)}</b>
-                        </div>
-                      )}
-                      {stockLabel(selected) && (
-                        <div className="qty-picker-label" style={{ marginTop: -2 }}>{stockLabel(selected)}</div>
-                      )}
+                  <div className="qty-picker" style={{ borderBottom: "none", marginBottom: 0, paddingBottom: 0 }}>
+                    <span className="qty-picker-label">{isUnitItem(selected) ? "How many packs?" : "How many?"}</span>
+                    <div className="qty-stepper">
+                      <button type="button" onClick={() => setViewQty((q) => clamp(selected, q - 1))}>−</button>
+                      <input
+                        type="number"
+                        min={minPacks(selected)}
+                        max={maxPacks(selected) || undefined}
+                        value={viewQty}
+                        onChange={(e) => setViewQty(clamp(selected, Math.floor(Number(e.target.value) || minPacks(selected))))}
+                      />
+                      <button type="button" onClick={() => setViewQty((q) => clamp(selected, q + 1))}>+</button>
                     </div>
-                  )}
-                  <div className="pay-label">💗 Scan to pay</div>
-                  <div className="qr-wrap">
-                    <img src="/qr.jpg" alt="Payment QR code" />
-                  </div>
-                  <div className="pay-hint">
-                    Scan with your banking app to pay {formatPrice(packs * selected.price, selected.currency)}.
-                    Once you've paid, add your contact below and tap notify — I'll confirm and set up the in-game trade.
-                  </div>
-                  <div className="field" style={{ width: "100%" }}>
-                    <label>Your Roblox username (required)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. yourRobloxName"
-                      value={buyerContact}
-                      onChange={(e) => setBuyerContact(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="field" style={{ width: "100%" }}>
-                    <label>Your Telegram username (required)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. @yourhandle"
-                      value={telegramContact}
-                      onChange={(e) => setTelegramContact(e.target.value)}
-                      required
-                    />
+                    {minPacks(selected) > 1 && (
+                      <div className="qty-picker-label">Minimum purchase: {minPacks(selected)}{isUnitItem(selected) ? " packs" : ""}</div>
+                    )}
+                    {isUnitItem(selected) ? (
+                      <div className="qty-total">
+                        = {(viewQty * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
+                        <b>{formatPrice(viewQty * selected.price, selected.currency)}</b>
+                      </div>
+                    ) : (
+                      <div className="qty-total">Total: <b>{formatPrice(viewQty * selected.price, selected.currency)}</b></div>
+                    )}
                   </div>
                   <button
                     className="btn"
                     style={{ width: "100%", justifyContent: "center" }}
-                    onClick={submitClaim}
-                    disabled={claimState === "sending" || !buyerContact.trim() || !telegramContact.trim()}
+                    onClick={() => {
+                      addToCart(selected, viewQty);
+                      setSelected(null);
+                    }}
                   >
-                    {claimState === "sending" ? "Sending…" : "I've paid — notify seller"}
+                    Add to cart 🛒
                   </button>
-                  {claimState === "error" && <div className="error-text">Something went wrong — try again in a moment.</div>}
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Cart modal */}
+      {cartOpen && (
+        <div className="overlay" onClick={closeCart}>
+          <div className="modal cart-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeCart}>✕</button>
+
+            <div className="checkout-body" style={{ paddingBottom: 0 }}>
+              <div className="checkout-name">Your cart</div>
+            </div>
+
+            {checkoutState === "sent" ? (
+              <div className="checkout-body">
+                <div className="pay-panel">
+                  <div className="pay-label" style={{ color: "#2f8a6f" }}>Seller notified 🎉</div>
+                  <div className="pay-hint">They'll confirm your payment and reach out to set up the in-game trade.</div>
+                </div>
+              </div>
+            ) : cartLines.length === 0 ? (
+              <div className="checkout-body">
+                <div className="empty-state">Your cart is empty. Add some items first!</div>
+              </div>
+            ) : (
+              <>
+                <div className="cart-list">
+                  {cartLines.map((l) => (
+                    <div className="cart-line" key={l.itemId}>
+                      <div className="cart-line-thumb">
+                        {l.item.image ? <img src={l.item.image} alt={l.item.name} /> : null}
+                      </div>
+                      <div className="cart-line-body">
+                        <div className="cart-line-name">{l.item.name}</div>
+                        <div className="cart-line-price">
+                          {formatPrice(l.item.price * l.qty, l.item.currency)}
+                          {isUnitItem(l.item) && ` · ${(l.qty * l.item.unit_amount).toLocaleString()} ${l.item.unit_label}`}
+                        </div>
+                      </div>
+                      <div className="cart-line-stepper">
+                        <button onClick={() => setCartQty(l.item, l.qty - 1)}>−</button>
+                        <span>{l.qty}</span>
+                        <button onClick={() => setCartQty(l.item, l.qty + 1)}>+</button>
+                      </div>
+                      <button className="cart-line-remove" onClick={() => removeCartLine(l.itemId)} title="Remove">✕</button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="cart-total-row">
+                  <span>Total</span>
+                  <b>{formatPrice(cartTotal, cartCurrency)}</b>
+                </div>
+
+                <div className="checkout-body" style={{ paddingTop: 0 }}>
+                  <div className="field">
+                    <label>Your Roblox username (required)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. yourRobloxName"
+                      value={buyerContact}
+                      onChange={(e) => setBuyerContact(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label>Telegram (required — so we can alert you when it's sent)</label>
+                    {telegramIdentity ? (
+                      <div className="logged-in-pill">
+                        <span>✓ Logged in as @{telegramIdentity.username || telegramIdentity.first_name}</span>
+                        <button onClick={logoutTelegram}>Log out</button>
+                      </div>
+                    ) : useManualTelegram ? (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="e.g. @yourhandle"
+                          value={telegramManual}
+                          onChange={(e) => setTelegramManual(e.target.value)}
+                        />
+                        <button className="manual-telegram-toggle" style={{ marginTop: 8 }} onClick={() => setUseManualTelegram(false)}>
+                          ← Log in with Telegram instead
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="telegram-login-box" ref={widgetHostRef}>
+                          {!process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME && (
+                            <div className="telegram-login-hint">Telegram login isn't set up yet.</div>
+                          )}
+                        </div>
+                        <button className="manual-telegram-toggle" style={{ marginTop: 8 }} onClick={() => setUseManualTelegram(true)}>
+                          Or just type your Telegram username
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="pay-panel">
+                    <div className="pay-label">💗 Scan to pay</div>
+                    <div className="qr-wrap">
+                      <img src="/qr.jpg" alt="Payment QR code" />
+                    </div>
+                    <div className="pay-hint">
+                      Scan with your banking app to pay {formatPrice(cartTotal, cartCurrency)} total. Once you've paid,
+                      tap notify below — I'll confirm and set up the in-game trade, then alert you on Telegram the moment it's sent.
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn"
+                    style={{ width: "100%", justifyContent: "center" }}
+                    onClick={submitCheckout}
+                    disabled={
+                      checkoutState === "sending" ||
+                      !buyerContact.trim() ||
+                      (!telegramIdentity && !telegramManual.trim())
+                    }
+                  >
+                    {checkoutState === "sending" ? "Sending…" : "I've paid — notify seller"}
+                  </button>
+                  {checkoutState === "error" && <div className="error-text">{checkoutError}</div>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {toast && <div className={`toast ${toast.isError ? "error" : ""}`}>{toast.msg}</div>}
     </div>
   );
 }
