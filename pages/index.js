@@ -78,15 +78,12 @@ export default function Storefront() {
   const [viewQty, setViewQty] = useState(1);
 
   const [buyerContact, setBuyerContact] = useState("");
-  const [telegramIdentity, setTelegramIdentity] = useState(null);
-  const [useManualTelegram, setUseManualTelegram] = useState(false);
-  const [telegramManual, setTelegramManual] = useState("");
+  const [telegramContact, setTelegramContact] = useState("");
   const [checkoutState, setCheckoutState] = useState("idle"); // idle | sending | sent | error
   const [checkoutError, setCheckoutError] = useState("");
 
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
-  const widgetHostRef = useRef(null);
 
   useEffect(() => {
     fetch("/api/items")
@@ -99,7 +96,7 @@ export default function Storefront() {
   useEffect(() => {
     setCart(readLocal("minnieshop_cart", []));
     setBuyerContact(readLocal("minnieshop_roblox", ""));
-    setTelegramIdentity(readLocal("minnieshop_tg", null));
+    setTelegramContact(readLocal("minnieshop_telegram", ""));
     setHydrated(true);
   }, []);
 
@@ -115,45 +112,8 @@ export default function Storefront() {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem("minnieshop_tg", JSON.stringify(telegramIdentity));
-  }, [telegramIdentity, hydrated]);
-
-  // Inject the Telegram Login Widget when the cart is open and nobody's logged in yet.
-  useEffect(() => {
-    if (!cartOpen || telegramIdentity || useManualTelegram || !widgetHostRef.current) return;
-    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
-    if (!botUsername) return;
-
-    widgetHostRef.current.innerHTML = "";
-    window.onTelegramAuth = async (user) => {
-      try {
-        const res = await fetch("/api/telegram-verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
-        const data = await res.json();
-        if (res.ok && data.identity) {
-          setTelegramIdentity(data.identity);
-          showToast("Logged in with Telegram!");
-        } else {
-          showToast("Telegram login didn't verify — try again.", true);
-        }
-      } catch (e) {
-        showToast("Telegram login failed — try again.", true);
-      }
-    };
-
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", botUsername);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "10");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    widgetHostRef.current.appendChild(script);
-  }, [cartOpen, telegramIdentity, useManualTelegram]);
+    window.localStorage.setItem("minnieshop_telegram", JSON.stringify(telegramContact));
+  }, [telegramContact, hydrated]);
 
   function showToast(msg, isError = false) {
     setToast({ msg, isError });
@@ -206,15 +166,9 @@ export default function Storefront() {
   const cartTotal = cartLines.reduce((sum, l) => sum + Number(l.item.price) * l.qty, 0);
   const cartCurrency = cartLines[0]?.item.currency || "USD";
 
-  async function logoutTelegram() {
-    await fetch("/api/telegram-logout", { method: "POST" });
-    setTelegramIdentity(null);
-  }
-
   async function submitCheckout() {
     if (cartLines.length === 0) return;
-    if (!buyerContact.trim()) return;
-    if (!telegramIdentity && !telegramManual.trim()) return;
+    if (!buyerContact.trim() || !telegramContact.trim()) return;
     setCheckoutState("sending");
     setCheckoutError("");
     try {
@@ -224,10 +178,7 @@ export default function Storefront() {
         body: JSON.stringify({
           cartItems: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
           buyerContact,
-          telegramContact: telegramIdentity ? undefined : telegramManual,
-          telegramUserId: telegramIdentity?.id,
-          telegramUsername: telegramIdentity?.username,
-          telegramFirstName: telegramIdentity?.first_name,
+          telegramContact,
         }),
       });
       const data = await res.json();
@@ -482,36 +433,13 @@ export default function Storefront() {
                   </div>
 
                   <div className="field">
-                    <label>Telegram (required — so we can alert you when it's sent)</label>
-                    {telegramIdentity ? (
-                      <div className="logged-in-pill">
-                        <span>✓ Logged in as @{telegramIdentity.username || telegramIdentity.first_name}</span>
-                        <button onClick={logoutTelegram}>Log out</button>
-                      </div>
-                    ) : useManualTelegram ? (
-                      <>
-                        <input
-                          type="text"
-                          placeholder="e.g. @yourhandle"
-                          value={telegramManual}
-                          onChange={(e) => setTelegramManual(e.target.value)}
-                        />
-                        <button className="manual-telegram-toggle" style={{ marginTop: 8 }} onClick={() => setUseManualTelegram(false)}>
-                          ← Log in with Telegram instead
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="telegram-login-box" ref={widgetHostRef}>
-                          {!process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME && (
-                            <div className="telegram-login-hint">Telegram login isn't set up yet.</div>
-                          )}
-                        </div>
-                        <button className="manual-telegram-toggle" style={{ marginTop: 8 }} onClick={() => setUseManualTelegram(true)}>
-                          Or just type your Telegram username
-                        </button>
-                      </>
-                    )}
+                    <label>Your Telegram username (required)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. @yourhandle"
+                      value={telegramContact}
+                      onChange={(e) => setTelegramContact(e.target.value)}
+                    />
                   </div>
 
                   <div className="pay-panel">
@@ -521,7 +449,7 @@ export default function Storefront() {
                     </div>
                     <div className="pay-hint">
                       Scan with your banking app to pay {formatPrice(cartTotal, cartCurrency)} total. Once you've paid,
-                      tap notify below — I'll confirm and set up the in-game trade, then alert you on Telegram the moment it's sent.
+                      tap notify below — I'll confirm and set up the in-game trade.
                     </div>
                   </div>
 
@@ -529,11 +457,7 @@ export default function Storefront() {
                     className="btn"
                     style={{ width: "100%", justifyContent: "center" }}
                     onClick={submitCheckout}
-                    disabled={
-                      checkoutState === "sending" ||
-                      !buyerContact.trim() ||
-                      (!telegramIdentity && !telegramManual.trim())
-                    }
+                    disabled={checkoutState === "sending" || !buyerContact.trim() || !telegramContact.trim()}
                   >
                     {checkoutState === "sending" ? "Sending…" : "I've paid — notify seller"}
                   </button>
