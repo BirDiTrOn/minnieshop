@@ -12,11 +12,22 @@ function gameMeta(gameId) {
   return GAME_PRESETS.find((g) => g.id === gameId) || GAME_PRESETS[2];
 }
 
-function formatPrice(price, currency) {
+const KHR_RATE = 4000; // fixed rate: 1 USD = 4000 KHR
+
+function formatPrice(price, currency, dual = true) {
   const n = Number(price);
-  if (currency === "KHR") return `៛${n.toLocaleString()}`;
-  if (n > 0 && n < 0.01) return `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}`;
-  return `$${n.toFixed(2)}`;
+  if (currency === "KHR") {
+    const primary = `៛${n.toLocaleString()}`;
+    if (!dual) return primary;
+    const usd = n / KHR_RATE;
+    const usdStr = usd > 0 && usd < 0.01 ? `$${usd.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${usd.toFixed(2)}`;
+    return `${primary} (${usdStr})`;
+  }
+  const primary = n > 0 && n < 0.01 ? `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${n.toFixed(2)}`;
+  if (!dual) return primary;
+  const khrRaw = n * KHR_RATE;
+  const khr = khrRaw < 100 ? Math.round(khrRaw) : Math.round(khrRaw / 100) * 100;
+  return `${primary} (៛${khr.toLocaleString()})`;
 }
 
 function isUnitItem(item) {
