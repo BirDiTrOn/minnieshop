@@ -424,6 +424,12 @@ a { color: inherit; }
 .cart-line-stepper span {
   font-family: "Space Mono", monospace; font-weight: 700; font-size: 12.5px; min-width: 22px; text-align: center;
 }
+.cart-line-stepper input {
+  font-family: "Space Mono", monospace; font-weight: 700; font-size: 12.5px; text-align: center;
+  width: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 3px 2px;
+  background: var(--panel-2); color: var(--text);
+}
+.cart-line-stepper input:focus { border-color: var(--accent); outline: none; }
 .cart-line-remove {
   flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent;
   color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;

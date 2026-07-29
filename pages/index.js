@@ -76,6 +76,7 @@ export default function Storefront() {
 
   const [selected, setSelected] = useState(null);
   const [viewQty, setViewQty] = useState("1");
+  const [qtyDrafts, setQtyDrafts] = useState({});
 
   const [buyerContact, setBuyerContact] = useState("");
   const [telegramContact, setTelegramContact] = useState("");
@@ -154,9 +155,9 @@ export default function Storefront() {
     setViewQty(String(minPacks(item)));
   }
 
-  function quickAdd(e, item) {
+  function openAddFromRow(e, item) {
     e.stopPropagation();
-    addToCart(item, minPacks(item));
+    openItem(item);
   }
 
   const cartLines = cart
@@ -290,7 +291,7 @@ export default function Storefront() {
                   </div>
                 </div>
                 {!isUnavailable(it) && (
-                  <button className="quick-add-btn" onClick={(e) => quickAdd(e, it)}>+ Add</button>
+                  <button className="quick-add-btn" onClick={(e) => openAddFromRow(e, it)}>+ Add</button>
                 )}
               </div>
             );
@@ -408,7 +409,21 @@ export default function Storefront() {
                       </div>
                       <div className="cart-line-stepper">
                         <button onClick={() => setCartQty(l.item, l.qty - 1)}>−</button>
-                        <span>{l.qty}</span>
+                        <input
+                          type="number"
+                          min={minPacks(l.item)}
+                          max={maxPacks(l.item) || undefined}
+                          value={qtyDrafts[l.itemId] !== undefined ? qtyDrafts[l.itemId] : String(l.qty)}
+                          onChange={(e) => setQtyDrafts((prev) => ({ ...prev, [l.itemId]: e.target.value }))}
+                          onBlur={(e) => {
+                            setCartQty(l.item, Math.floor(Number(e.target.value) || minPacks(l.item)));
+                            setQtyDrafts((prev) => {
+                              const next = { ...prev };
+                              delete next[l.itemId];
+                              return next;
+                            });
+                          }}
+                        />
                         <button onClick={() => setCartQty(l.item, l.qty + 1)}>+</button>
                       </div>
                       <button className="cart-line-remove" onClick={() => removeCartLine(l.itemId)} title="Remove">✕</button>
