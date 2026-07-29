@@ -61,7 +61,7 @@ export default function Dashboard() {
 
   const [form, setForm] = useState({
     name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
-    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "",
+    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "", tiers: [],
   });
   const [imgError, setImgError] = useState("");
 
@@ -89,7 +89,7 @@ export default function Dashboard() {
   function resetForm() {
     setForm({
       name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
-      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "",
+      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "", tiers: [],
     });
     setImgError("");
     setEditingId(null);
@@ -115,10 +115,24 @@ export default function Dashboard() {
       unitAmount: item.unit_amount ?? "",
       stock: item.stock === null || item.stock === undefined ? "" : item.stock,
       minQty: item.min_qty === null || item.min_qty === undefined || Number(item.min_qty) === 1 ? "" : item.min_qty,
+      tiers: Array.isArray(item.tiers) ? item.tiers.map((t) => ({ minQty: String(t.minQty ?? ""), pricePerUnit: String(t.pricePerUnit ?? "") })) : [],
     });
     setImgError("");
     setEditingId(item.id);
     setShowForm(true);
+  }
+
+  function addTierRow() {
+    setForm((f) => ({ ...f, tiers: [...f.tiers, { minQty: "", pricePerUnit: "" }] }));
+  }
+  function updateTierRow(index, field, value) {
+    setForm((f) => ({
+      ...f,
+      tiers: f.tiers.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
+    }));
+  }
+  function removeTierRow(index) {
+    setForm((f) => ({ ...f, tiers: f.tiers.filter((_, i) => i !== index) }));
   }
 
   async function handleImageChange(e) {
@@ -161,6 +175,9 @@ export default function Dashboard() {
       stock: form.stock === "" ? null : form.stock,
       minQty: form.minQty === "" ? 1 : form.minQty,
       min_qty: form.minQty === "" ? 1 : form.minQty,
+      tiers: form.tiers
+        .filter((t) => t.minQty !== "" && t.pricePerUnit !== "")
+        .map((t) => ({ minQty: Number(t.minQty), pricePerUnit: Number(t.pricePerUnit) })),
     };
     try {
       const res = await fetch(editingId ? `/api/items/${editingId}` : "/api/items", {
@@ -512,6 +529,52 @@ export default function Dashboard() {
                   value={form.minQty}
                   onChange={(e) => setForm((f) => ({ ...f, minQty: e.target.value }))}
                 />
+              </div>
+
+              <div className="field">
+                <label>Bulk pricing (optional) — cheaper rate once buyer hits a quantity</label>
+                {form.tiers.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+                    {form.tiers.map((t, i) => (
+                      <div key={i} className="row-2" style={{ alignItems: "center" }}>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Buy at least e.g. 1000"
+                          value={t.minQty}
+                          onChange={(e) => updateTierRow(i, "minQty", e.target.value)}
+                        />
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.0001"
+                            placeholder="New price per 1, e.g. 0.0065"
+                            value={t.pricePerUnit}
+                            onChange={(e) => updateTierRow(i, "pricePerUnit", e.target.value)}
+                          />
+                          <button type="button" className="btn-danger" style={{ flex: "0 0 auto", padding: "10px 12px" }} onClick={() => removeTierRow(i)}>
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="add-item-btn" onClick={addTierRow}>+ Add price tier</button>
+                {form.tiers.some((t) => t.minQty !== "" && t.pricePerUnit !== "") && (
+                  <div className="qty-total" style={{ marginTop: 8 }}>
+                    Example: buying {form.tiers[form.tiers.length - 1]?.minQty || "?"} would total{" "}
+                    <b>
+                      {formatPrice(
+                        (Number(form.tiers[form.tiers.length - 1]?.pricePerUnit) || 0) *
+                          (Number(form.tiers[form.tiers.length - 1]?.minQty) || 0),
+                        form.currency
+                      )}
+                    </b>
+                  </div>
+                )}
               </div>
 
               <div className="field">

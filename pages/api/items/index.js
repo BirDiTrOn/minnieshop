@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { isAdminRequest } from "../../../lib/adminAuth";
+import { sanitizeTiers } from "../../../lib/pricing";
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
@@ -27,7 +28,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    const { name, game, gameLabel, price, currency, description, image, pricingMode, unitLabel, unitAmount, stock, minQty } =
+    const { name, game, gameLabel, price, currency, description, image, pricingMode, unitLabel, unitAmount, stock, minQty, tiers } =
       req.body || {};
     if (!name || !price) return res.status(400).json({ error: "Name and price are required" });
     if (pricingMode === "unit" && (!unitLabel || !unitAmount)) {
@@ -55,6 +56,7 @@ export default async function handler(req, res) {
         unit_amount: pricingMode === "unit" ? unitAmount : null,
         min_qty: minQty === "" || minQty === null || minQty === undefined ? 1 : Math.max(1, Math.floor(Number(minQty))),
         stock: stock === "" || stock === null || stock === undefined ? null : stock,
+        tiers: sanitizeTiers(tiers),
         description: description || "",
         image: image || null,
         sold: false,

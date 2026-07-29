@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { isAdminRequest } from "../../../lib/adminAuth";
 import { sendTelegramMessage } from "../../../lib/telegram";
+import { computeTotal, effectiveUnitPrice } from "../../../lib/pricing";
 
 export default async function handler(req, res) {
   if (req.method === "POST") {
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const lineTotal = Math.round(Number(item.price) * qty * 10000) / 10000;
+      const lineTotal = computeTotal(item, qty);
       total = Math.round((total + lineTotal) * 10000) / 10000;
       currency = item.currency || currency;
 
@@ -52,6 +53,7 @@ export default async function handler(req, res) {
         unit_label: item.unit_label,
         unit_amount: item.unit_amount,
         price: item.price,
+        unit_price_applied: effectiveUnitPrice(item, qty),
         currency: item.currency,
         qty,
         line_total: lineTotal,

@@ -14,6 +14,7 @@ create table if not exists items (
   unit_amount numeric,
   min_qty numeric not null default 1,
   stock numeric,
+  tiers jsonb,
   position integer not null default 0,
   description text,
   image text,

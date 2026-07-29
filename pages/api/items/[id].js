@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { isAdminRequest } from "../../../lib/adminAuth";
+import { sanitizeTiers } from "../../../lib/pricing";
 
 export default async function handler(req, res) {
   if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
@@ -8,12 +9,13 @@ export default async function handler(req, res) {
   if (req.method === "PUT") {
     const allowed = [
       "name", "game", "game_label", "price", "currency", "description", "image", "sold",
-      "pricing_mode", "unit_label", "unit_amount", "stock", "min_qty",
+      "pricing_mode", "unit_label", "unit_amount", "stock", "min_qty", "tiers",
     ];
     const updates = {};
     for (const key of allowed) {
       if (key in (req.body || {})) updates[key] = req.body[key];
     }
+    if ("tiers" in updates) updates.tiers = sanitizeTiers(updates.tiers);
     const { data, error } = await supabaseAdmin
       .from("items")
       .update(updates)

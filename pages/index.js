@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
+import { computeTotal, bestUnitPrice } from "../lib/pricing";
 
 const GAME_PRESETS = [
   { id: "grow-a-garden", label: "Grow a Garden 2", accent: "#8fd6c1", glow: "rgba(143,214,193,0.25)" },
@@ -164,7 +165,7 @@ export default function Storefront() {
     .map((l) => ({ ...l, item: items.find((i) => i.id === l.itemId) }))
     .filter((l) => l.item);
   const cartCount = cartLines.length;
-  const cartTotal = cartLines.reduce((sum, l) => sum + Number(l.item.price) * l.qty, 0);
+  const cartTotal = cartLines.reduce((sum, l) => sum + computeTotal(l.item, l.qty), 0);
   const cartCurrency = cartLines[0]?.item.currency || "USD";
 
   async function submitCheckout() {
@@ -285,6 +286,9 @@ export default function Storefront() {
                     <span className="price-ticket">
                       {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
                     </span>
+                    {Array.isArray(it.tiers) && it.tiers.length > 0 && (
+                      <span className="item-row-stock">from {formatPrice(bestUnitPrice(it), it.currency)} in bulk</span>
+                    )}
                     {stockLabel(it) && !it.sold && (
                       <span className="item-row-stock">{stockLabel(it)}</span>
                     )}
@@ -348,10 +352,17 @@ export default function Storefront() {
                     {isUnitItem(selected) ? (
                       <div className="qty-total">
                         = {((Number(viewQty) || 0) * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
-                        <b>{formatPrice((Number(viewQty) || 0) * selected.price, selected.currency)}</b>
+                        <b>{formatPrice(computeTotal(selected, Number(viewQty) || 0), selected.currency)}</b>
                       </div>
                     ) : (
-                      <div className="qty-total">Total: <b>{formatPrice((Number(viewQty) || 0) * selected.price, selected.currency)}</b></div>
+                      <div className="qty-total">Total: <b>{formatPrice(computeTotal(selected, Number(viewQty) || 0), selected.currency)}</b></div>
+                    )}
+                    {Array.isArray(selected.tiers) && selected.tiers.length > 0 && (
+                      <div className="tier-hint">
+                        {selected.tiers.map((t) => (
+                          <div key={t.minQty}>Buy {t.minQty}+ → {formatPrice(t.pricePerUnit, selected.currency)} each</div>
+                        ))}
+                      </div>
                     )}
                   </div>
                   <button
@@ -403,7 +414,7 @@ export default function Storefront() {
                       <div className="cart-line-body">
                         <div className="cart-line-name">{l.item.name}</div>
                         <div className="cart-line-price">
-                          {formatPrice(l.item.price * l.qty, l.item.currency)}
+                          {formatPrice(computeTotal(l.item, l.qty), l.item.currency)}
                           {isUnitItem(l.item) && ` · ${(l.qty * l.item.unit_amount).toLocaleString()} ${l.item.unit_label}`}
                         </div>
                       </div>
