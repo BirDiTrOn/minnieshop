@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
-import { computeTotal, bestUnitPrice } from "../lib/pricing";
+import { computeTotal } from "../lib/pricing";
 
 const GAME_PRESETS = [
   { id: "grow-a-garden", label: "Grow a Garden 2", accent: "#8fd6c1", glow: "rgba(143,214,193,0.25)" },
@@ -307,9 +307,6 @@ export default function Storefront() {
                     <span className="price-ticket">
                       {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
                     </span>
-                    {Array.isArray(it.tiers) && it.tiers.length > 0 && (
-                      <span className="item-row-stock">from {formatPrice(bestUnitPrice(it), it.currency)} in bulk</span>
-                    )}
                     {stockLabel(it) && !it.sold && (
                       <span className="item-row-stock">{stockLabel(it)}</span>
                     )}
