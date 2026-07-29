@@ -14,20 +14,30 @@ function gameMeta(gameId) {
 
 const KHR_RATE = 4000; // fixed rate: 1 USD = 4000 KHR
 
-function formatPrice(price, currency, dual = true) {
+function formatPrice(price, currency) {
+  const n = Number(price);
+  if (currency === "KHR") return `៛${n.toLocaleString()}`;
+  if (n > 0 && n < 0.01) return `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}`;
+  return `$${n.toFixed(2)}`;
+}
+
+function equivalentPrice(price, currency) {
   const n = Number(price);
   if (currency === "KHR") {
-    const primary = `៛${n.toLocaleString()}`;
-    if (!dual) return primary;
     const usd = n / KHR_RATE;
-    const usdStr = usd > 0 && usd < 0.01 ? `$${usd.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${usd.toFixed(2)}`;
-    return `${primary} (${usdStr})`;
+    return usd > 0 && usd < 0.01 ? `$${usd.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${usd.toFixed(2)}`;
   }
-  const primary = n > 0 && n < 0.01 ? `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${n.toFixed(2)}`;
-  if (!dual) return primary;
   const khrRaw = n * KHR_RATE;
   const khr = khrRaw < 100 ? Math.round(khrRaw) : Math.round(khrRaw / 100) * 100;
-  return `${primary} (៛${khr.toLocaleString()})`;
+  return `៛${khr.toLocaleString()}`;
+}
+
+function PriceWithEquivalent({ price, currency }) {
+  return (
+    <>
+      {formatPrice(price, currency)} <span className="price-khr">({equivalentPrice(price, currency)})</span>
+    </>
+  );
 }
 
 function fileToCompressedDataUrl(file, maxDim = 480, quality = 0.82) {
@@ -329,7 +339,7 @@ export default function Dashboard() {
                   <div className="order-main">
                     <div className="order-name">
                       {o.item_name} {o.qty > 1 && <span style={{ color: "var(--muted)" }}>× {o.qty}</span>} —{" "}
-                      {formatPrice(o.total_price ?? o.price, o.currency)}
+                      <PriceWithEquivalent price={o.total_price ?? o.price} currency={o.currency} />
                     </div>
                     {cartLines && cartLines.length > 1 && (
                       <div className="order-meta" style={{ marginTop: 2 }}>

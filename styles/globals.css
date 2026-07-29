@@ -220,6 +220,10 @@ a { color: inherit; }
   color: #6b4a17; background: linear-gradient(135deg, #fbe0a4, var(--gold));
   padding: 5px 13px 5px 17px; clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
 }
+.price-khr {
+  color: #3d4f91;
+  font-weight: 600;
+}
 
 .empty-state {
   text-align: center; color: var(--muted); padding: 54px 20px; border: 1.5px dashed var(--border);

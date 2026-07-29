@@ -14,20 +14,30 @@ function gameMeta(gameId) {
 
 const KHR_RATE = 4000; // fixed rate: 1 USD = 4000 KHR
 
-function formatPrice(price, currency, dual = true) {
+function formatPrice(price, currency) {
+  const n = Number(price);
+  if (currency === "KHR") return `៛${n.toLocaleString()}`;
+  if (n > 0 && n < 0.01) return `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}`;
+  return `$${n.toFixed(2)}`;
+}
+
+function equivalentPrice(price, currency) {
   const n = Number(price);
   if (currency === "KHR") {
-    const primary = `៛${n.toLocaleString()}`;
-    if (!dual) return primary;
     const usd = n / KHR_RATE;
-    const usdStr = usd > 0 && usd < 0.01 ? `$${usd.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${usd.toFixed(2)}`;
-    return `${primary} (${usdStr})`;
+    return usd > 0 && usd < 0.01 ? `$${usd.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${usd.toFixed(2)}`;
   }
-  const primary = n > 0 && n < 0.01 ? `$${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}` : `$${n.toFixed(2)}`;
-  if (!dual) return primary;
   const khrRaw = n * KHR_RATE;
   const khr = khrRaw < 100 ? Math.round(khrRaw) : Math.round(khrRaw / 100) * 100;
-  return `${primary} (៛${khr.toLocaleString()})`;
+  return `៛${khr.toLocaleString()}`;
+}
+
+function PriceWithEquivalent({ price, currency }) {
+  return (
+    <>
+      {formatPrice(price, currency)} <span className="price-khr">({equivalentPrice(price, currency)})</span>
+    </>
+  );
 }
 
 function isUnitItem(item) {
@@ -329,7 +339,13 @@ export default function Storefront() {
                   </span>
                 </div>
                 <span className="price-ticket">
-                  {isUnitItem(selected) ? unitRateLabel(selected) : formatPrice(selected.price, selected.currency)}
+                  {isUnitItem(selected) ? (
+                    <>
+                      {unitRateLabel(selected)} <span className="price-khr">({equivalentPrice(selected.price, selected.currency)})</span>
+                    </>
+                  ) : (
+                    <PriceWithEquivalent price={selected.price} currency={selected.currency} />
+                  )}
                 </span>
               </div>
 
@@ -363,10 +379,10 @@ export default function Storefront() {
                     {isUnitItem(selected) ? (
                       <div className="qty-total">
                         = {((Number(viewQty) || 0) * selected.unit_amount).toLocaleString()} {selected.unit_label} for{" "}
-                        <b>{formatPrice(computeTotal(selected, Number(viewQty) || 0), selected.currency)}</b>
+                        <b><PriceWithEquivalent price={computeTotal(selected, Number(viewQty) || 0)} currency={selected.currency} /></b>
                       </div>
                     ) : (
-                      <div className="qty-total">Total: <b>{formatPrice(computeTotal(selected, Number(viewQty) || 0), selected.currency)}</b></div>
+                      <div className="qty-total">Total: <b><PriceWithEquivalent price={computeTotal(selected, Number(viewQty) || 0)} currency={selected.currency} /></b></div>
                     )}
                     {Array.isArray(selected.tiers) && selected.tiers.length > 0 && (
                       <div className="tier-hint">
@@ -425,7 +441,7 @@ export default function Storefront() {
                       <div className="cart-line-body">
                         <div className="cart-line-name">{l.item.name}</div>
                         <div className="cart-line-price">
-                          {formatPrice(computeTotal(l.item, l.qty), l.item.currency)}
+                          <PriceWithEquivalent price={computeTotal(l.item, l.qty)} currency={l.item.currency} />
                           {isUnitItem(l.item) && ` · ${(l.qty * l.item.unit_amount).toLocaleString()} ${l.item.unit_label}`}
                         </div>
                       </div>
@@ -455,7 +471,7 @@ export default function Storefront() {
 
                 <div className="cart-total-row">
                   <span>Total</span>
-                  <b>{formatPrice(cartTotal, cartCurrency)}</b>
+                  <b><PriceWithEquivalent price={cartTotal} currency={cartCurrency} /></b>
                 </div>
 
                 <div className="checkout-body" style={{ paddingTop: 0 }}>
@@ -485,7 +501,7 @@ export default function Storefront() {
                       <img src="/qr.jpg" alt="Payment QR code" />
                     </div>
                     <div className="pay-hint">
-                      Scan with your banking app to pay {formatPrice(cartTotal, cartCurrency)} total. Once you've paid,
+                      Scan with your banking app to pay <PriceWithEquivalent price={cartTotal} currency={cartCurrency} /> total. Once you've paid,
                       tap notify below — I'll confirm and set up the in-game trade.
                     </div>
                   </div>
