@@ -77,34 +77,6 @@ function stockLabel(item) {
   return isUnitItem(item) ? `${n.toLocaleString()} ${item.unit_label} left` : `${n.toLocaleString()} left`;
 }
 
-function fileToCompressedDataUrl(file, maxDim = 900, quality = 0.8) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read file"));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("Could not decode image"));
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > height && width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 function readLocal(key, fallback) {
   if (typeof window === "undefined") return fallback;
   try {
@@ -130,8 +102,6 @@ export default function Storefront() {
 
   const [buyerContact, setBuyerContact] = useState("");
   const [telegramContact, setTelegramContact] = useState("");
-  const [paymentProof, setPaymentProof] = useState(null);
-  const [proofError, setProofError] = useState("");
   const [checkoutState, setCheckoutState] = useState("idle"); // idle | sending | sent | error
   const [checkoutError, setCheckoutError] = useState("");
 
@@ -221,7 +191,7 @@ export default function Storefront() {
 
   async function submitCheckout() {
     if (cartLines.length === 0) return;
-    if (!buyerContact.trim() || !telegramContact.trim() || !paymentProof) return;
+    if (!buyerContact.trim() || !telegramContact.trim()) return;
     setCheckoutState("sending");
     setCheckoutError("");
     try {
@@ -232,7 +202,6 @@ export default function Storefront() {
           cartItems: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
           buyerContact,
           telegramContact,
-          paymentProof,
         }),
       });
       const data = await res.json();
@@ -243,26 +212,9 @@ export default function Storefront() {
       }
       setCheckoutState("sent");
       setCart([]);
-      setPaymentProof(null);
     } catch (e) {
       setCheckoutError("Something went wrong — try again.");
       setCheckoutState("error");
-    }
-  }
-
-  async function handleProofChange(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setProofError("That's not an image file.");
-      return;
-    }
-    try {
-      const dataUrl = await fileToCompressedDataUrl(file);
-      setPaymentProof(dataUrl);
-      setProofError("");
-    } catch (err) {
-      setProofError("Couldn't load that image — try again.");
     }
   }
 
@@ -551,21 +503,11 @@ export default function Storefront() {
                     </div>
                   </div>
 
-                  <div className="field">
-                    <label>Upload proof of payment (required)</label>
-                    {paymentProof && <img className="img-preview" src={paymentProof} alt="Payment proof preview" />}
-                    <label className="img-drop">
-                      {paymentProof ? "Change screenshot" : "Click to upload a screenshot of your payment"}
-                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleProofChange} />
-                    </label>
-                    {proofError && <div className="error-text">{proofError}</div>}
-                  </div>
-
                   <button
                     className="btn"
                     style={{ width: "100%", justifyContent: "center" }}
                     onClick={submitCheckout}
-                    disabled={checkoutState === "sending" || !buyerContact.trim() || !telegramContact.trim() || !paymentProof}
+                    disabled={checkoutState === "sending" || !buyerContact.trim() || !telegramContact.trim()}
                   >
                     {checkoutState === "sending" ? "Sending…" : "I've paid — notify seller"}
                   </button>

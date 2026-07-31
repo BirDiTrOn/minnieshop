@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { isAdminRequest } from "../../../lib/adminAuth";
-import { sendTelegramMessage, sendTelegramPhoto } from "../../../lib/telegram";
+import { sendTelegramMessage } from "../../../lib/telegram";
 import { computeTotal, effectiveUnitPrice } from "../../../lib/pricing";
 
 export default async function handler(req, res) {
@@ -12,7 +12,6 @@ export default async function handler(req, res) {
       telegramUserId,
       telegramUsername,
       telegramFirstName,
-      paymentProof,
     } = req.body || {};
 
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
@@ -23,9 +22,6 @@ export default async function handler(req, res) {
     }
     if (!telegramUserId && (!telegramContact || !telegramContact.trim())) {
       return res.status(400).json({ error: "A Telegram login or username is required" });
-    }
-    if (!paymentProof) {
-      return res.status(400).json({ error: "A screenshot of your payment is required" });
     }
 
     const ids = cartItems.map((c) => c.itemId).filter(Boolean);
@@ -86,7 +82,6 @@ export default async function handler(req, res) {
         telegram_user_id: telegramUserId ? String(telegramUserId) : null,
         telegram_username: telegramUsername || null,
         telegram_first_name: telegramFirstName || null,
-        payment_proof: paymentProof || null,
         status: "pending",
       })
       .select()
@@ -109,14 +104,9 @@ export default async function handler(req, res) {
       `Open your admin dashboard to confirm the trade.`;
 
     try {
-      await sendTelegramPhoto(paymentProof, text);
+      await sendTelegramMessage(text);
     } catch (e) {
-      console.error("Telegram photo notify failed:", e.message);
-      try {
-        await sendTelegramMessage(text + "\n\n(Couldn't attach the payment screenshot — check the dashboard.)");
-      } catch (e2) {
-        console.error("Telegram fallback notify failed:", e2.message);
-      }
+      console.error("Telegram notify failed:", e.message);
     }
 
     return res.status(201).json({ order });
