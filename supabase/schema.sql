@@ -36,6 +36,7 @@ create table if not exists orders (
   telegram_username text,
   telegram_first_name text,
   items jsonb,
+  payment_proof text,
   status text not null default 'pending',
   created_at timestamptz not null default now()
 );

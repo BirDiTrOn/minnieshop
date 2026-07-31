@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [claimsCollapsed, setClaimsCollapsed] = useState(false);
+  const [proofPreview, setProofPreview] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -357,6 +358,14 @@ export default function Dashboard() {
                       {" · "}
                       {new Date(o.created_at).toLocaleString()}
                     </div>
+                    {o.payment_proof && (
+                      <img
+                        src={o.payment_proof}
+                        alt="Payment proof"
+                        className="proof-thumb"
+                        onClick={() => setProofPreview(o.payment_proof)}
+                      />
+                    )}
                   </div>
                   {o.status === "pending" ? (
                     <div className="order-actions">
@@ -618,6 +627,15 @@ export default function Dashboard() {
                 {saving ? "Saving…" : editingId ? "Save changes" : "Add to vault"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {proofPreview && (
+        <div className="overlay" onClick={() => setProofPreview(null)}>
+          <div className="modal" style={{ maxWidth: 480, padding: 12 }} onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setProofPreview(null)}>✕</button>
+            <img src={proofPreview} alt="Payment proof" style={{ width: "100%", borderRadius: 12, display: "block" }} />
           </div>
         </div>
       )}
