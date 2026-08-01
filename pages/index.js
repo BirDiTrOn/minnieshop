@@ -8,6 +8,12 @@ const GAME_PRESETS = [
   { id: "other", label: "Other game", accent: "#93b7f0", glow: "rgba(147,183,240,0.2)" },
 ];
 
+const CATEGORY_PRESETS = [
+  { id: "seed", label: "Seed" },
+  { id: "gear", label: "Gear" },
+  { id: "pet", label: "Pet" },
+];
+
 function gameMeta(gameId) {
   return GAME_PRESETS.find((g) => g.id === gameId) || GAME_PRESETS[2];
 }
@@ -90,7 +96,8 @@ function readLocal(key, fallback) {
 export default function Storefront() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("grow-a-garden");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -223,7 +230,9 @@ export default function Storefront() {
     if (checkoutState === "sent") setCheckoutState("idle");
   }
 
-  const filtered = items.filter((it) => filter === "all" || it.game === filter);
+  const filtered = items.filter(
+    (it) => it.game === filter && (categoryFilter === "all" || it.category === categoryFilter)
+  );
   const activeCount = items.filter((it) => !isUnavailable(it)).length;
 
   return (
@@ -257,21 +266,45 @@ export default function Storefront() {
 
       <div className="toolbar">
         <div className="filters">
-          <button className={`filter-chip ${filter === "all" ? "active" : ""}`} style={filter === "all" ? { background: "linear-gradient(135deg, var(--accent), var(--accent-2))" } : {}} onClick={() => setFilter("all")}>
-            All items
-          </button>
           {GAME_PRESETS.map((g) => (
             <button
               key={g.id}
               className={`filter-chip ${filter === g.id ? "active" : ""}`}
               style={filter === g.id ? { background: g.accent } : {}}
-              onClick={() => setFilter(g.id)}
+              onClick={() => {
+                setFilter(g.id);
+                setCategoryFilter("all");
+              }}
             >
               {g.label}
             </button>
           ))}
         </div>
       </div>
+
+      {filter === "grow-a-garden" && (
+        <div className="toolbar" style={{ marginTop: -10 }}>
+          <div className="filters">
+            <button
+              className={`filter-chip ${categoryFilter === "all" ? "active" : ""}`}
+              style={categoryFilter === "all" ? { background: "linear-gradient(135deg, var(--accent), var(--accent-2))" } : {}}
+              onClick={() => setCategoryFilter("all")}
+            >
+              All categories
+            </button>
+            {CATEGORY_PRESETS.map((c) => (
+              <button
+                key={c.id}
+                className={`filter-chip ${categoryFilter === c.id ? "active" : ""}`}
+                style={categoryFilter === c.id ? { background: gameMeta("grow-a-garden").accent } : {}}
+                onClick={() => setCategoryFilter(c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="empty-state">Loading listings…</div>

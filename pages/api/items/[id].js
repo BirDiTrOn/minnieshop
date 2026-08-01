@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (req.method === "PUT") {
     const allowed = [
       "name", "game", "game_label", "price", "currency", "description", "image", "sold",
-      "pricing_mode", "unit_label", "unit_amount", "stock", "min_qty", "tiers",
+      "pricing_mode", "unit_label", "unit_amount", "stock", "min_qty", "tiers", "category",
     ];
     const updates = {};
     for (const key of allowed) {

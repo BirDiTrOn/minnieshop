@@ -16,6 +16,7 @@ create table if not exists items (
   stock numeric,
   tiers jsonb,
   position integer not null default 0,
+  category text,
   description text,
   image text,
   sold boolean not null default false,

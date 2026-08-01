@@ -82,7 +82,7 @@ export default function Dashboard() {
 
   const [form, setForm] = useState({
     name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
-    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "", tiers: [],
+    pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "", tiers: [], category: "",
   });
   const [imgError, setImgError] = useState("");
 
@@ -110,7 +110,7 @@ export default function Dashboard() {
   function resetForm() {
     setForm({
       name: "", game: "grow-a-garden", customGame: "", price: "", currency: "USD", description: "", image: null,
-      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "", tiers: [],
+      pricingMode: "fixed", unitLabel: "", unitAmount: "", stock: "", minQty: "", tiers: [], category: "",
     });
     setImgError("");
     setEditingId(null);
@@ -137,6 +137,7 @@ export default function Dashboard() {
       stock: item.stock === null || item.stock === undefined ? "" : item.stock,
       minQty: item.min_qty === null || item.min_qty === undefined || Number(item.min_qty) === 1 ? "" : item.min_qty,
       tiers: Array.isArray(item.tiers) ? item.tiers.map((t) => ({ minQty: String(t.minQty ?? ""), pricePerUnit: String(t.pricePerUnit ?? "") })) : [],
+      category: item.category || "",
     });
     setImgError("");
     setEditingId(item.id);
@@ -196,6 +197,7 @@ export default function Dashboard() {
       stock: form.stock === "" ? null : form.stock,
       minQty: form.minQty === "" ? 1 : form.minQty,
       min_qty: form.minQty === "" ? 1 : form.minQty,
+      category: form.category || null,
       tiers: form.tiers
         .filter((t) => t.minQty !== "" && t.pricePerUnit !== "")
         .map((t) => ({ minQty: Number(t.minQty), pricePerUnit: Number(t.pricePerUnit) })),
@@ -469,6 +471,18 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+
+              {form.game === "grow-a-garden" && (
+                <div className="field">
+                  <label>Category (optional)</label>
+                  <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+                    <option value="">No category</option>
+                    <option value="seed">Seed</option>
+                    <option value="gear">Gear</option>
+                    <option value="pet">Pet</option>
+                  </select>
+                </div>
+              )}
 
               <div className="field">
                 <label>How is this priced?</label>

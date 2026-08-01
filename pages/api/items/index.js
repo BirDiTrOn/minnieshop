@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    const { name, game, gameLabel, price, currency, description, image, pricingMode, unitLabel, unitAmount, stock, minQty, tiers } =
+    const { name, game, gameLabel, price, currency, description, image, pricingMode, unitLabel, unitAmount, stock, minQty, tiers, category } =
       req.body || {};
     if (!name || !price) return res.status(400).json({ error: "Name and price are required" });
     if (pricingMode === "unit" && (!unitLabel || !unitAmount)) {
@@ -57,6 +57,7 @@ export default async function handler(req, res) {
         min_qty: minQty === "" || minQty === null || minQty === undefined ? 1 : Math.max(1, Math.floor(Number(minQty))),
         stock: stock === "" || stock === null || stock === undefined ? null : stock,
         tiers: sanitizeTiers(tiers),
+        category: category || null,
         description: description || "",
         image: image || null,
         sold: false,
