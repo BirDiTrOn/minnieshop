@@ -347,7 +347,6 @@ export default function Storefront() {
                     <div className="neon-card-cat" style={{ color: meta.accent }}>{categoryLabel}</div>
                     <div className="neon-card-name">{it.name}</div>
                     <div className="neon-card-price-row">
-                      <span className="neon-qty-badge">{minPacks(it)}</span>
                       <span className="neon-price">
                         {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
                       </span>
