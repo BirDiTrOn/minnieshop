@@ -494,3 +494,91 @@ a { color: inherit; }
   background: transparent; border: 1px dashed var(--accent); border-radius: 999px; padding: 6px 14px; cursor: pointer;
 }
 .add-tier-btn:hover { background: rgba(183,156,240,0.1); }
+
+/* Neon-style item grid (dark cards on the light page background) */
+.showing-count {
+  font-family: "Baloo 2", sans-serif; font-size: 12.5px; color: var(--muted); margin: -6px 0 12px;
+}
+.neon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+.neon-card {
+  position: relative;
+  background: #14141f;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.neon-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(20,10,40,0.28); }
+.neon-card.unavailable { opacity: 0.55; }
+.neon-card-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #ff3d81, #7b5bff, #ffdd57, #3ee6c5);
+}
+.neon-card-img {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background:
+    radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 16px 16px,
+    #1b1c29;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.neon-card-img img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.4));
+}
+.neon-card-noimg {
+  color: rgba(255,255,255,0.3); font-family: "Baloo 2", sans-serif; font-size: 11px;
+}
+.neon-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(10,10,16,0.75); backdrop-filter: blur(3px);
+  color: #fff; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 9.5px;
+  padding: 4px 8px; border-radius: 999px; letter-spacing: 0.03em;
+}
+.neon-badge-low { background: linear-gradient(135deg, #ff3d81, #ff6fa8); }
+.neon-badge-off { background: rgba(0,0,0,0.8); color: #ff9db3; }
+.neon-card-body {
+  padding: 11px 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.neon-card-cat {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.neon-card-name {
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 14px; color: #f2f2f7; line-height: 1.25;
+}
+.neon-card-price-row { display: flex; align-items: center; gap: 6px; }
+.neon-qty-badge {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  background: linear-gradient(135deg, #ffd76a, #f4a72c);
+  color: #3a2a05; font-family: "Space Mono", monospace; font-weight: 700; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.neon-price {
+  font-family: "Space Mono", monospace; font-weight: 700; font-size: 12.5px; color: rgba(255,255,255,0.82);
+}
+.neon-cart-btn {
+  margin-top: 6px; width: 100%; border: none; border-radius: 10px; padding: 10px;
+  background: linear-gradient(135deg, #ff3d81, #ff2e76);
+  color: #1a0a12; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 12px;
+  letter-spacing: 0.02em; text-transform: uppercase; cursor: pointer;
+}
+.neon-cart-btn:hover { filter: brightness(1.08); }
+
+@media (max-width: 420px) {
+  .neon-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .neon-card-name { font-size: 13px; }
+}

@@ -314,44 +314,55 @@ export default function Storefront() {
           <div>Check back soon — new items get added regularly.</div>
         </div>
       ) : (
-        <div className="item-row-list">
-          {filtered.map((it) => {
-            const meta = gameMeta(it.game);
-            return (
-              <div key={it.id} className="item-row" style={{ "--card-accent": meta.accent }} onClick={() => openItem(it)}>
-                <div className={`item-row-thumb ${isUnavailable(it) ? "sold" : ""}`}>
-                  {it.image ? (
-                    <img src={it.image} alt={it.name} />
-                  ) : (
-                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 10 }}>
-                      no photo
-                    </div>
-                  )}
-                  {isUnavailable(it) && (
-                    <span className="sold-badge-sm">{isOutOfStock(it) && !it.sold ? "OUT" : "SOLD"}</span>
-                  )}
-                </div>
-                <div className="item-row-body">
-                  <div className="item-row-top">
-                    <span className="item-row-name">{it.name}</span>
-                    <span className="game-tag-inline" style={{ color: meta.accent }}>{it.game_label}</span>
+        <>
+          <div className="showing-count">Showing {filtered.length} of {items.length}</div>
+          <div className="neon-grid">
+            {filtered.map((it) => {
+              const meta = gameMeta(it.game);
+              const categoryLabel = it.category
+                ? CATEGORY_PRESETS.find((c) => c.id === it.category)?.label || it.category
+                : it.game_label;
+              const stock = stockLabel(it);
+              const lowStock = hasStockTracking(it) && !isOutOfStock(it) && Number(it.stock) <= 10;
+              return (
+                <div
+                  key={it.id}
+                  className={`neon-card ${isUnavailable(it) ? "unavailable" : ""}`}
+                  onClick={() => openItem(it)}
+                >
+                  <div className="neon-card-bar" />
+                  <div className="neon-card-img">
+                    {it.image ? (
+                      <img src={it.image} alt={it.name} />
+                    ) : (
+                      <div className="neon-card-noimg">no photo</div>
+                    )}
+                    {isUnavailable(it) ? (
+                      <span className="neon-badge neon-badge-off">{isOutOfStock(it) && !it.sold ? "OUT OF STOCK" : "SOLD"}</span>
+                    ) : stock ? (
+                      <span className={`neon-badge ${lowStock ? "neon-badge-low" : ""}`}>{lowStock ? stock.replace(" left", " LEFT").toUpperCase() : `${stock.replace(" left", "").toUpperCase()} IN STOCK`}</span>
+                    ) : null}
                   </div>
-                  <div className="item-row-bottom">
-                    <span className="price-ticket">
-                      {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
-                    </span>
-                    {stockLabel(it) && !it.sold && (
-                      <span className="item-row-stock">{stockLabel(it)}</span>
+                  <div className="neon-card-body">
+                    <div className="neon-card-cat" style={{ color: meta.accent }}>{categoryLabel}</div>
+                    <div className="neon-card-name">{it.name}</div>
+                    <div className="neon-card-price-row">
+                      <span className="neon-qty-badge">{minPacks(it)}</span>
+                      <span className="neon-price">
+                        {isUnitItem(it) ? unitRateLabel(it) : formatPrice(it.price, it.currency)}
+                      </span>
+                    </div>
+                    {!isUnavailable(it) && (
+                      <button className="neon-cart-btn" onClick={(e) => openAddFromRow(e, it)}>
+                        Add to cart ⚡
+                      </button>
                     )}
                   </div>
                 </div>
-                {!isUnavailable(it) && (
-                  <button className="quick-add-btn" onClick={(e) => openAddFromRow(e, it)}>+ Add</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Item detail modal */}
