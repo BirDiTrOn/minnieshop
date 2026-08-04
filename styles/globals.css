@@ -506,7 +506,7 @@ a { color: inherit; }
 }
 .neon-card {
   position: relative;
-  background: #4a3f6b;
+  background: #ffb6c1;
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
@@ -525,8 +525,8 @@ a { color: inherit; }
   position: relative;
   aspect-ratio: 1 / 1;
   background:
-    radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px) 0 0 / 16px 16px,
-    #3c3358;
+    radial-gradient(rgba(0,0,0,0.06) 1px, transparent 1px) 0 0 / 16px 16px,
+    #ffa2b3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -537,7 +537,7 @@ a { color: inherit; }
   filter: drop-shadow(0 6px 10px rgba(0,0,0,0.4));
 }
 .neon-card-noimg {
-  color: rgba(255,255,255,0.3); font-family: "Baloo 2", sans-serif; font-size: 11px;
+  color: rgba(90,32,54,0.4); font-family: "Baloo 2", sans-serif; font-size: 11px;
 }
 .neon-badge {
   position: absolute; top: 8px; right: 8px;
@@ -558,11 +558,11 @@ a { color: inherit; }
   text-transform: uppercase; letter-spacing: 0.05em;
 }
 .neon-card-name {
-  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 14px; color: #f2f2f7; line-height: 1.25;
+  font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 14px; color: #5a2036; line-height: 1.25;
 }
 .neon-card-price-row { display: flex; align-items: center; gap: 6px; }
 .neon-price {
-  font-family: "Space Mono", monospace; font-weight: 700; font-size: 12.5px; color: rgba(255,255,255,0.82);
+  font-family: "Space Mono", monospace; font-weight: 700; font-size: 12.5px; color: #7a3550;
 }
 .neon-cart-btn {
   margin-top: 6px; width: 100%; border: none; border-radius: 10px; padding: 10px;
